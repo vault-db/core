@@ -214,5 +214,68 @@ describe('Schedule', () => {
         g3: ['A', [w4], ['g2']]
       })
     })
+
+    //      |   +------------+    +----+
+    //    A |   | w1      w4 |    | w3 |
+    //      |   +---\--------+    +/---+
+    //      |        \            /
+    //      |        +\---+      /
+    //    B |        | w2 ------'
+    //      |        +----+
+    //
+    it('places an indepdendent operation in the earliest group', () => {
+      let w1 = schedule.add('A', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('A', [w2])
+      let w4 = schedule.add('A', [])
+
+      assertGraph(schedule, {
+        g1: ['A', [w1, w4]],
+        g2: ['B', [w2], ['g1']],
+        g3: ['A', [w3], ['g2']]
+      })
+    })
+
+    //      |   +----+    +------------+
+    //    A |   | w1 |    | w3 ---- w4 |
+    //      |   +---\+    +/-----------+
+    //      |        \    /
+    //      |        +\--/+
+    //    B |        | w2 |
+    //      |        +----+
+    //
+    it('places an operation no earlier than a direct dependency', () => {
+      let w1 = schedule.add('A', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('A', [w2])
+      let w4 = schedule.add('A', [w3])
+
+      assertGraph(schedule, {
+        g1: ['A', [w1]],
+        g2: ['B', [w2], ['g1']],
+        g3: ['A', [w3, w4], ['g2']]
+      })
+    })
+
+    //      |   +----+    +------------+
+    //    A |   | w1 |    | w3      w4 |
+    //      |   +---\+    +/-------/---+
+    //      |        \    /       /
+    //      |        +\--/+      /
+    //    B |        | w2 ------'
+    //      |        +----+
+    //
+    it('places an operation later than an indirect dependency', () => {
+      let w1 = schedule.add('A', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('A', [w2])
+      let w4 = schedule.add('A', [w2])
+
+      assertGraph(schedule, {
+        g1: ['A', [w1]],
+        g2: ['B', [w2], ['g1']],
+        g3: ['A', [w3, w4], ['g2']]
+      })
+    })
   })
 })
