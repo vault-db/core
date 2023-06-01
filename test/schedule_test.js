@@ -178,5 +178,26 @@ describe('Schedule', () => {
         g3: ['A', [w3], ['g1', 'g2']]
       })
     })
+
+    //      |   +----+            +----+
+    //    A |   | w1 |            | w4 |
+    //      |   +---\+            +/---+
+    //      |        \            /
+    //      |        +\----------/+
+    //    B |        | w2 ---- w3 |
+    //      |        +------------+
+    //
+    it('tracks an indirect dependency through multiple hops', () => {
+      let w1 = schedule.add('A', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('B', [w2])
+      let w4 = schedule.add('A', [w3])
+
+      assertGraph(schedule, {
+        g1: ['A', [w1]],
+        g2: ['B', [w2, w3], ['g1']],
+        g3: ['A', [w4], ['g2']]
+      })
+    })
   })
 })
