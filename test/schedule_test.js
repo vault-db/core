@@ -304,5 +304,35 @@ describe('Schedule', () => {
         g4: ['C', [w4, w5], ['g3']]
       })
     })
+
+    //      |                +------------+
+    //    A |          .------ w2      w7 ------.
+    //      |         /      +--------/---+      \
+    //      |        /               /            \
+    //      |   +---/---------------/+    +--------\---+
+    //    B |   | w1      w3      w6 |    | w5      w8 |
+    //      |   +-----------\--------+    +/-------/---+
+    //      |                \            /       /
+    //      |                +\---+      /       /
+    //    C |                | w4 ------'-------'
+    //      |                +----+
+    //
+    it('places a dependent set of operations', () => {
+      let w1 = schedule.add('B', [])
+      let w2 = schedule.add('A', [w1])
+      let w3 = schedule.add('B', [])
+      let w4 = schedule.add('C', [w3])
+      let w5 = schedule.add('B', [w4])
+      let w6 = schedule.add('B', [])
+      let w7 = schedule.add('A', [w6])
+      let w8 = schedule.add('B', [w4, w7])
+
+      assertGraph(schedule, {
+        g1: ['B', [w1, w3, w6]],
+        g2: ['A', [w2, w7], ['g1']],
+        g3: ['C', [w4], ['g1']],
+        g4: ['B', [w5, w8], ['g2', 'g3']]
+      })
+    })
   })
 })
