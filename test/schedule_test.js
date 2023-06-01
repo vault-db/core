@@ -277,5 +277,32 @@ describe('Schedule', () => {
         g3: ['A', [w3, w4], ['g2']]
       })
     })
+
+    //      |        +----+
+    //    A |        | w2 |
+    //      |        +/--\+
+    //      |        /    \
+    //      |   +---/+    +\---+
+    //    B |   | w1 |    | w3 |
+    //      |   +----+    +---\+
+    //      |                  \
+    //      |          +--------\---+
+    //    C |          | w4      w5 |
+    //      |          +------------+
+    //
+    it('takes the group index from operations on the same shard', () => {
+      let w1 = schedule.add('B', [])
+      let w2 = schedule.add('A', [w1])
+      let w3 = schedule.add('B', [w2])
+      let w4 = schedule.add('C', [])
+      let w5 = schedule.add('C', [w3])
+
+      assertGraph(schedule, {
+        g1: ['B', [w1]],
+        g2: ['A', [w2], ['g1']],
+        g3: ['B', [w3], ['g2']],
+        g4: ['C', [w4, w5], ['g3']]
+      })
+    })
   })
 })
