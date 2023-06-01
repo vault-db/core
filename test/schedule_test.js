@@ -84,6 +84,21 @@ describe('Schedule', () => {
       })
     })
 
+    //      |   +----------------------------+
+    //    A |   | w1 ---- w2 ---- w3 ---- w4 |
+    //      |   +----------------------------+
+    //
+    it('groups a chain of operations on the same shard', () => {
+      let w1 = schedule.add('A', [])
+      let w2 = schedule.add('A', [w1])
+      let w3 = schedule.add('A', [w2])
+      let w4 = schedule.add('A', [w3])
+
+      assertGraph(schedule, {
+        g1: ['A', [w1, w2, w3, w4]]
+      })
+    })
+
     //      |   +----+
     //    A |   | w1 |
     //      |   +----+
