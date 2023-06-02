@@ -21,7 +21,7 @@ function assertGraph (schedule, spec) {
 
     mapping.set(id, group.id)
     let mappedDeps = deps.map((dep) => mapping.get(dep))
-    assert.sameMembers([...group.deps], mappedDeps)
+    assert.sameMembers([...group.parents], mappedDeps)
   }
 }
 
@@ -212,6 +212,53 @@ describe('Schedule', () => {
         g1: ['A', [w1]],
         g2: ['B', [w2, w3], ['g1']],
         g3: ['A', [w4], ['g2']]
+      })
+    })
+
+    //      |   +----+            +----+
+    //    A |   | w1 |            | w4 |
+    //      |   +---\+            +/---+
+    //      |        \            /
+    //      |        +\----------/+
+    //    B |        | w2      w3 |
+    //      |        +------------+
+    //
+    it('tracks an indirect dependency via operations in the same group', () => {
+      let w1 = schedule.add('A', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('B', [])
+      let w4 = schedule.add('A', [w3])
+
+      assertGraph(schedule, {
+        g1: ['A', [w1]],
+        g2: ['B', [w2, w3], ['g1']],
+        g3: ['A', [w4], ['g2']]
+      })
+    })
+
+    //      |   +----+             +----+
+    //    A |   | w1 |             | w4 |
+    //      |   +---\+             +/---+
+    //      |        \             /
+    //      |        +\---+       /
+    //    B |        | w2 |      /
+    //      |        +---\+     /
+    //      |             \    /
+    //      |             +\--/+
+    //    C |             | w3 |
+    //      |             +----+
+    //
+    it('tracks an indirect dependency via a chain of groups', () => {
+      let w1 = schedule.add('A', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('C', [w2])
+      let w4 = schedule.add('A', [w3])
+
+      assertGraph(schedule, {
+        g1: ['A', [w1]],
+        g2: ['B', [w2], ['g1']],
+        g3: ['C', [w3], ['g2']],
+        g4: ['A', [w4], ['g3']]
       })
     })
 
