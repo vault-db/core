@@ -37,14 +37,25 @@ function findGroup (groups, shard, ops) {
   })
 }
 
+function assertShardList (schedule, shard, ...expected) {
+  let groups = schedule._shards.get(shard)
+
+  assert.equal(groups.length, expected.length,
+    `shard '${shard}' expected to have ${expected.length} groups but had ${groups.length}`)
+
+  for (let [idx, groupId] of groups.entries()) {
+    let group = schedule._groups.get(groupId)
+    assert.sameMembers([...group.ops], expected[idx])
+  }
+}
+
 describe('Schedule', () => {
   let schedule
 
-  beforeEach(() => {
-    schedule = new Schedule()
-  })
-
   describe('basic planning', () => {
+    beforeEach(() => {
+      schedule = new Schedule()
+    })
 
     //      |   +----+
     //    A |   | w1 |
@@ -380,6 +391,185 @@ describe('Schedule', () => {
         g3: ['C', [w4], ['g1']],
         g4: ['B', [w5, w8], ['g2', 'g3']]
       })
+    })
+  })
+
+  describe('depth reduction', () => {
+    beforeEach(() => {
+      schedule = new Schedule({ depthLimit: 2 })
+    })
+
+    //      |   +----+
+    //    A |   | w1 |
+    //      |   +---\+
+    //      |        \
+    //      |        +\---+
+    //    B |        | w2 |
+    //      |        +---\+
+    //      |             \
+    //      |   +----+    +\---+
+    //    C |   | w4 |    | w3 |
+    //      |   +----+    +----+
+    //
+    it('places an independent op in a new group at the front of a shard list', () => {
+      let w1 = schedule.add('A', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('C', [w2])
+      let w4 = schedule.add('C', [])
+
+      assertGraph(schedule, {
+        g1: ['A', [w1]],
+        g2: ['B', [w2], ['g1']],
+        g3: ['C', [w3], ['g2']],
+        g4: ['C', [w4]]
+      })
+
+      assertShardList(schedule, 'C', [w4], [w3])
+    })
+
+    //      |   +----+    +----+    +----+
+    //    A |   | w1 |    | w6 |    | w5 |
+    //      |   +---\+    +/---+    +/---+
+    //      |        \    /         /
+    //      |        +\--/+    +---/+
+    //    B |        | w2 |    | w4 |
+    //      |        +---\+    +/---+
+    //      |             \    /
+    //      |             +\--/+
+    //    C |             | w3 |
+    //      |             +----+
+    //
+    it('places a dependent op in a new group in the middle of a shard list', () => {
+      let w1 = schedule.add('A', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('C', [w2])
+      let w4 = schedule.add('B', [w3])
+      let w5 = schedule.add('A', [w4])
+      let w6 = schedule.add('A', [w2])
+
+      assertGraph(schedule, {
+        g1: ['A', [w1]],
+        g2: ['B', [w2], ['g1']],
+        g3: ['C', [w3], ['g2']],
+        g4: ['B', [w4], ['g3']],
+        g5: ['A', [w5], ['g4']],
+        g6: ['A', [w6], ['g2']]
+      })
+
+      assertShardList(schedule, 'A', [w1], [w6], [w5])
+      assertShardList(schedule, 'B', [w2], [w4])
+    })
+
+    //      |   +----+    +-------------+
+    //    A |   | w1 |    | w5       w4 |
+    //      |   +---\+    +/--------/---+
+    //      |        \    /        /
+    //      |        +\--/+       /
+    //    B |        | w2 |      /
+    //      |        +---\+     /
+    //      |             \    /
+    //      |             +\--/+
+    //    C |             | w3 |
+    //      |             +----+
+    //
+    it('does not create new groups if the depth saving is insufficient', () => {
+      let w1 = schedule.add('A', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('C', [w2])
+      let w4 = schedule.add('A', [w3])
+      let w5 = schedule.add('A', [w2])
+
+      assertGraph(schedule, {
+        g1: ['A', [w1]],
+        g2: ['B', [w2], ['g1']],
+        g3: ['C', [w3], ['g2']],
+        g4: ['A', [w5, w4], ['g2', 'g3']],
+      })
+
+      assertShardList(schedule, 'A', [w1], [w5, w4])
+    })
+
+    //      |   +----+
+    //    A |   | w1 |
+    //      |   +---\+
+    //      |        \
+    //      |        +\---+
+    //    B |        | w2 |
+    //      |        +---\+
+    //      |             \
+    //      |             +\-----------+
+    //    C |             | w3 ---- w4 |
+    //      |             +------------+
+    //
+    it('places a dependent op no earlier than its direct dependency', () => {
+      let w1 = schedule.add('A', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('C', [w2])
+      let w4 = schedule.add('C', [w3])
+
+      assertGraph(schedule, {
+        g1: ['A', [w1]],
+        g2: ['B', [w2], ['g1']],
+        g3: ['C', [w3, w4], ['g2']],
+      })
+    })
+
+    //      |   +----+
+    //    A |   | w1 |
+    //      |   +---\+
+    //      |        \
+    //      |        +\---+
+    //    B |        | w2 |
+    //      |        +---\+
+    //      |             \
+    //      |   +----+    +\-----------+
+    //    C |   | w4 |    | w3 ---- w5 |
+    //      |   +----+    +------------+
+    //
+    it('places a dependent op in an index-shifted group', () => {
+      let w1 = schedule.add('A', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('C', [w2])
+      let w4 = schedule.add('C', [])
+      let w5 = schedule.add('C', [w3])
+
+      assertGraph(schedule, {
+        g1: ['A', [w1]],
+        g2: ['B', [w2], ['g1']],
+        g3: ['C', [w3, w5], ['g2']],
+        g4: ['C', [w4]]
+      })
+
+      assertShardList(schedule, 'C', [w4], [w3, w5])
+    })
+
+    //      |           +----+
+    //    A |           | w1 |
+    //      |           +---\+
+    //      |                \
+    //      |        +--------\---+
+    //    B |        | w5      w2 |
+    //      |        +/----------\+
+    //      |        /            \
+    //      |   +---/+            +\---+
+    //    C |   | w4 |            | w3 |
+    //      |   +----+            +----+
+    //
+    it('links two chains if it does not excessively increase the depth', () => {
+      let w1 = schedule.add('A', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('C', [w2])
+      let w4 = schedule.add('C', [])
+      let w5 = schedule.add('B', [w4])
+
+      assertGraph(schedule, {
+        g1: ['A', [w1]],
+        g2: ['C', [w4]],
+        g3: ['B', [w5, w2], ['g1', 'g2']],
+        g4: ['C', [w3], ['g3']],
+      })
+
+      assertShardList(schedule, 'C', [w4], [w3])
     })
   })
 })
