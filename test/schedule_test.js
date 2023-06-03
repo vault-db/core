@@ -543,6 +543,33 @@ describe('Schedule', () => {
       assertShardList(schedule, 'C', [w4], [w3, w5])
     })
 
+    //      |   +----+
+    //    A |   | w3 |
+    //      |   +---\+
+    //      |        \
+    //      |        +\-----------+
+    //    B |        | w4      w1 |
+    //      |        +-----------\+
+    //      |                     \
+    //      |   +----+            +\---+
+    //    C |   | w5 |            | w2 |
+    //      |   +----+            +----+
+    //
+    it('adjusts the depth of downstream groups', () => {
+      let w1 = schedule.add('B', [])
+      let w2 = schedule.add('C', [w1])
+      let w3 = schedule.add('A', [])
+      let w4 = schedule.add('B', [w3])
+      let w5 = schedule.add('C', [])
+
+      assertGraph(schedule, {
+        g1: ['A', [w3]],
+        g2: ['B', [w4, w1], ['g1']],
+        g3: ['C', [w2], ['g2']],
+        g4: ['C', [w5]]
+      })
+    })
+
     //      |           +----+
     //    A |           | w1 |
     //      |           +---\+
