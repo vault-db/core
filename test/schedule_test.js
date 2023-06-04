@@ -598,5 +598,35 @@ describe('Schedule', () => {
 
       assertShardList(schedule, 'C', [w4], [w3])
     })
+
+    //      |        +------------+
+    //    A |        | w2      w3 |
+    //      |        +/----------\+
+    //      |        /            \
+    //      |   +---/+    +--------\---+
+    //    B |   | w1 |    | w6      w4 |
+    //      |   +----+    +/-----------+
+    //      |             /
+    //      |        +---/+
+    //    C |        | w5 |
+    //      |        +----+
+    //
+    it('places a dependent op avoiding increasing the graph depth', () => {
+      let w1 = schedule.add('B', [])
+      let w2 = schedule.add('A', [w1])
+      let w3 = schedule.add('A', [])
+      let w4 = schedule.add('B', [w3])
+      let w5 = schedule.add('C', [])
+      let w6 = schedule.add('B', [w5])
+
+      assertGraph(schedule, {
+        g1: ['B', [w1]],
+        g2: ['A', [w2, w3], ['g1']],
+        g3: ['C', [w5]],
+        g4: ['B', [w6, w4], ['g2', 'g3']]
+      })
+
+      assertShardList(schedule, 'B', [w1], [w6, w4])
+    })
   })
 })
