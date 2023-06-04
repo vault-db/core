@@ -392,6 +392,33 @@ describe('Schedule', () => {
         g4: ['B', [w5, w8], ['g2', 'g3']]
       })
     })
+
+    //      |   +----+                     +----+
+    //    A |   | w3 |                     | w5 |
+    //      |   +---\+                     +/---+
+    //      |        \                     /
+    //      |         \               +---/+
+    //    B |          \              | w2 |
+    //      |           \             +/---+
+    //      |            \            /
+    //      |            +\----------/+
+    //    C |            | w4      w1 |
+    //      |            +------------+
+    //
+    it('tracks indirect dependencies through group chains', () => {
+      let w1 = schedule.add('C', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('A', [])
+      let w4 = schedule.add('C', [w3])
+      let w5 = schedule.add('A', [w2])
+
+      assertGraph(schedule, {
+        g1: ['A', [w3]],
+        g2: ['C', [w4, w1], ['g1']],
+        g3: ['B', [w2], ['g2']],
+        g4: ['A', [w5], ['g3']]
+      })
+    })
   })
 
   describe('depth reduction', () => {
