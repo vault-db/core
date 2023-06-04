@@ -679,5 +679,84 @@ describe('Schedule', () => {
 
       assertShardList(schedule, 'B', [w1, w5], [w4])
     })
+
+    //      |        +------------+
+    //    A |        | w2      w3 |
+    //      |        +/----------\+
+    //      |        /            \
+    //      |   +---/+            +\-----------+
+    //    B |   | w1 |            | w5      w8 |
+    //      |   +---\+            +/-------/---+
+    //      |        \            /       /
+    //      |        +\----------/+      /
+    //    C |        | w6      w4 |     /
+    //      |        +------------+    /
+    //      |                         /
+    //      |                    +---/+
+    //    D |                    | w7 |
+    //      |                    +----+
+    //
+    it('tracks the depth of groups with multiple parents', () => {
+      let w1 = schedule.add('B', [])
+      let w2 = schedule.add('A', [w1])
+      let w3 = schedule.add('A', [])
+      let w4 = schedule.add('C', [])
+      let w5 = schedule.add('B', [w3, w4])
+      let w6 = schedule.add('C', [w1])
+      let w7 = schedule.add('D', [])
+      let w8 = schedule.add('B', [w7])
+
+      assertGraph(schedule, {
+        g1: ['B', [w1]],
+        g2: ['A', [w2, w3], ['g1']],
+        g3: ['C', [w6, w4], ['g1']],
+        g4: ['D', [w7]],
+        g5: ['B', [w5, w8], ['g2', 'g3', 'g4']]
+      })
+
+      assertShardList(schedule, 'B', [w1], [w5, w8])
+    })
+
+    //      |                 +----+
+    //    A |                 | w9 --------------.
+    //      |                 +/---+              \
+    //      |                 /                    \
+    //      |   +----+       /    +-----------------\----+    +----+
+    //    B |   | w5 |      /     | w2       w4      w10 |    | w8 |
+    //      |   +---\+     /      +/--------/--\---------+    +/---+
+    //      |        \    /       /        /    \             /
+    //      |        +\--/-------/+       /     +\---+       /
+    //    C |        | w6      w1 |      /      | w7 -------'
+    //      |        +-----------\+     /       +----+
+    //      |                     \    /
+    //      |                     +\--/+
+    //    D |                     | w3 |
+    //      |                     +----+
+    //
+    it('updates depth of descendants in topological order', () => {
+      let w1 = schedule.add('C', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('D', [w1])
+      let w4 = schedule.add('B', [w3])
+      let w5 = schedule.add('B', [])
+      let w6 = schedule.add('C', [w5])
+      let w7 = schedule.add('C', [w4])
+      let w8 = schedule.add('B', [w7])
+      let w9 = schedule.add('A', [w6])
+      let w10 = schedule.add('B', [w9])
+
+      assertGraph(schedule, {
+        g1: ['B', [w5]],
+        g2: ['C', [w6, w1], ['g1']],
+        g3: ['A', [w9], ['g2']],
+        g4: ['D', [w3], ['g2']],
+        g5: ['B', [w2, w4, w10], ['g2', 'g3', 'g4']],
+        g6: ['C', [w7], ['g5']],
+        g7: ['B', [w8], ['g6']]
+      })
+
+      assertShardList(schedule, 'B', [w5], [w2, w4, w10], [w8])
+      assertShardList(schedule, 'C', [w6, w1], [w7])
+    })
   })
 })
