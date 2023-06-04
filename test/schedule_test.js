@@ -419,6 +419,31 @@ describe('Schedule', () => {
         g4: ['A', [w5], ['g3']]
       })
     })
+
+    //      |   +----+
+    //    A |   | w1 |
+    //      |   +---\+
+    //      |        \
+    //      |        +\---+
+    //    B |        | w2 ------.
+    //      |        +---\+      \
+    //      |             \       \
+    //      |             +\-------\---+
+    //    C |             | w3      w4 |
+    //      |             +------------+
+    //
+    it('groups two operations with the same dependency', () => {
+      let w1 = schedule.add('A', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('C', [w2])
+      let w4 = schedule.add('C', [w2])
+
+      assertGraph(schedule, {
+        g1: ['A', [w1]],
+        g2: ['B', [w2], ['g1']],
+        g3: ['C', [w3, w4], ['g2']]
+      })
+    })
   })
 
   describe('depth reduction', () => {
@@ -757,6 +782,64 @@ describe('Schedule', () => {
 
       assertShardList(schedule, 'B', [w5], [w2, w4, w10], [w8])
       assertShardList(schedule, 'C', [w6, w1], [w7])
+    })
+
+    //      |   +----+
+    //    A |   | w1 |
+    //      |   +---\+
+    //      |        \
+    //      |        +\---+
+    //    B |        | w2 ------.
+    //      |        +---\+      \
+    //      |             \       \
+    //      |   +----+    +\-------\---+
+    //    C |   | w4 |    | w3      w5 |
+    //      |   +----+    +------------+
+    //
+    it('groups two operations with the same dependency', () => {
+      let w1 = schedule.add('A', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('C', [w2])
+      let w4 = schedule.add('C', [])
+      let w5 = schedule.add('C', [w2])
+
+      assertGraph(schedule, {
+        g1: ['A', [w1]],
+        g2: ['B', [w2], ['g1']],
+        g3: ['C', [w3, w5], ['g2']],
+        g4: ['C', [w4]]
+      })
+
+      assertShardList(schedule, 'C', [w4], [w3, w5])
+    })
+
+    //      |           +----+
+    //    A |           | w1 |
+    //      |           +---\+
+    //      |                \
+    //      |                +\---+
+    //    B |                | w2 |
+    //      |                +---\+
+    //      |                     \
+    //      |   +------------+    +\---+
+    //    C |   | w5      w4 |    | w3 |
+    //      |   +------------+    +----+
+    //
+    it('places an independent op into the earliest group', () => {
+      let w1 = schedule.add('A', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('C', [w2])
+      let w4 = schedule.add('C', [])
+      let w5 = schedule.add('C', [])
+
+      assertGraph(schedule, {
+        g1: ['A', [w1]],
+        g2: ['B', [w2], ['g1']],
+        g3: ['C', [w3], ['g2']],
+        g4: ['C', [w4, w5]]
+      })
+
+      assertShardList(schedule, 'C', [w4, w5], [w3])
     })
   })
 })
