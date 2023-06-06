@@ -1069,4 +1069,114 @@ describe('Schedule', () => {
       assertShardList(schedule, 'D', [w6], [w5])
     })
   })
+
+  describe('consumer interface', () => {
+    let w1, w2, w3, w4, w5, w6
+
+    //
+    //      |                +------------+
+    //    A |                | w4      w5 |
+    //      |                +/----------\+
+    //      |                /            \
+    //      |   +-----------/+            +\---+
+    //    B |   | w1      w3 |            | w6 |
+    //      |   +---\--------+            +----+
+    //      |        \
+    //      |        +\---+
+    //    C |        | w2 |
+    //      |        +----+
+    //
+    beforeEach(() => {
+      schedule = new Schedule()
+
+      w1 = schedule.add('B', [], 'val 1')
+      w2 = schedule.add('C', [w1], 'val 2')
+      w3 = schedule.add('B', [], 'val 3')
+      w4 = schedule.add('A', [w3], 'val 4')
+      w5 = schedule.add('A', [], 'val 5')
+      w6 = schedule.add('B', [w5], 'val 6')
+    })
+
+    it('schedules the operations as expected', () => {
+      assertGraph(schedule, {
+        g1: ['B', [w1, w3]],
+        g2: ['C', [w2], ['g1']],
+        g3: ['A', [w4, w5], ['g1']],
+        g4: ['B', [w6], ['g3']]
+      })
+
+      assertShardList(schedule, 'B', [w1, w3], [w6])
+    })
+
+    it('returns the names of the shards in the graph', () => {
+      assert.deepEqual([...schedule.shards()], ['B', 'C', 'A'])
+    })
+
+    it('returns the first available group', () => {
+      let group = schedule.nextGroup()
+      assert.deepEqual(group.values(), ['val 1', 'val 3'])
+    })
+
+    it('returns null when no more groups are available', () => {
+      schedule.nextGroup().started()
+      assert.isNull(schedule.nextGroup())
+    })
+
+    it('does not place new ops in a group that has been started', () => {
+      let group = schedule.nextGroup()
+      group.started()
+
+      let w7 = schedule.add('B', [])
+
+      assertGraph(schedule, {
+        g1: ['B', [w1, w3]],
+        g2: ['C', [w2], ['g1']],
+        g3: ['A', [w4, w5], ['g1']],
+        g4: ['B', [w6, w7], ['g3']]
+      })
+
+      assertShardList(schedule, 'B', [w1, w3], [w6, w7])
+    })
+
+    //      |   +------------+
+    //    A |   | w4      w5 |
+    //      |   +-----------\+
+    //      |                \
+    //      |                +\---+
+    //    B |                | w6 |
+    //      |                +----+
+    //      |
+    //      |   +----+
+    //    C |   | w2 |
+    //      |   +----+
+    //
+    it('removes a group that completes successfully', () => {
+      let group = schedule.nextGroup()
+      group.started()
+      group.completed()
+
+      assertGraph(schedule, {
+        g1: ['C', [w2]],
+        g2: ['A', [w4, w5]],
+        g3: ['B', [w6], ['g2']]
+      })
+    })
+
+    it('allows a new group to be started when its dependency is finished', () => {
+      let group = schedule.nextGroup()
+      group.started()
+      group.completed()
+
+      group = schedule.nextGroup()
+      assert.deepEqual(group.values(), ['val 2'])
+      group.started()
+
+      group = schedule.nextGroup()
+      assert.deepEqual(group.values(), ['val 4', 'val 5'])
+      group.started()
+
+      group = schedule.nextGroup()
+      assert.isNull(group)
+    })
+  })
 })
