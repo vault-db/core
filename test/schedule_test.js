@@ -19,9 +19,13 @@ function assertGraph (schedule, spec) {
       assert.fail(`no group found matching shard and operations for '${id}'`)
     }
 
-    mapping.set(id, group.id)
-    let mappedDeps = deps.map((dep) => mapping.get(dep))
-    assert.sameMembers([...group.parents], mappedDeps)
+    if (mapping.has(group.id)) {
+      assert.fail(`duplicate group definitions: '${mapping.get(group.id)}' and '${id}'`)
+    }
+
+    mapping.set(group.id, id)
+    let mappedDeps = [...group.parents].map((dep) => mapping.get(dep))
+    assert.sameMembers(mappedDeps, deps)
   }
 }
 
@@ -869,9 +873,9 @@ describe('Schedule', () => {
       assertGraph(schedule, {
         g1: ['A', [w1]],
         g2: ['B', [w2], ['g1']],
-        g3: ['D', [w5]],
-        g4: ['C', [w3, w6], ['g2', 'g3']],
-        g5: ['D', [w5]]
+        g3: ['C', [w4]],
+        g4: ['D', [w5]],
+        g5: ['C', [w3, w6], ['g2', 'g4']]
       })
     })
 
