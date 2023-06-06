@@ -545,6 +545,39 @@ describe('Schedule', () => {
       assertShardList(schedule, 'A', [w1], [w5, w4])
     })
 
+    //      |      +----+
+    //    A |      | w1 |
+    //      |      +---\+
+    //      |           \
+    //      |           +\---+
+    //    B |           | w2 |
+    //      |           +---\+
+    //      |                \
+    //      |        +--------\---+
+    //    C |        | w5      w3 |
+    //      |        +/----------\+
+    //      |        /            \
+    //      |   +---/+            +\---+
+    //    D |   | w4 |            | w6 |
+    //      |   +----+            +----+
+    //
+    it('places a depth-1 operation in a depth-2 group', () => {
+      let w1 = schedule.add('A', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('C', [w2])
+      let w4 = schedule.add('D', [])
+      let w5 = schedule.add('C', [w4])
+      let w6 = schedule.add('D', [w3])
+
+      assertGraph(schedule, {
+        g1: ['A', [w1]],
+        g2: ['B', [w2], ['g1']],
+        g3: ['D', [w4]],
+        g4: ['C', [w5, w3], ['g2', 'g3']],
+        g5: ['D', [w6], ['g4']]
+      })
+    })
+
     //      |   +----+
     //    A |   | w1 |
     //      |   +---\+
@@ -916,25 +949,23 @@ describe('Schedule', () => {
       assertShardList(schedule, 'C', [w7, w5], [w4])
     })
 
-    //      |        +----+
-    //    A |        | w2 |
-    //      |        +/--\+
-    //      |        /    \
-    //      |   +---/+    +\---+
-    //    B |   | w1 |    | w3 |
-    //      |   +---\+    +---\+
-    //      |        \         \
-    //      |         '---------\---------.
-    //      |                    \         \
-    //      |                    +\---+    +\-----------+
-    //    C |                    | w4 |    | w5      w7 |
-    //      |                    +---\+    +--------/---+
-    //      |                         \            /
-    //      |                         +\----------/+
-    //    D |                         | w8      w6 |
-    //      |                         +------------+
+    //      |                +----+
+    //    A |                | w2 |
+    //      |                +/--\+
+    //      |                /    \
+    //      |           +---/+    +\---+
+    //    B |           | w1 |    | w3 |
+    //      |           +---\+    +---\+
+    //      |                \         \
+    //      |        +--------\---+    +\---+
+    //    C |        | w7      w5 |    | w4 |
+    //      |        +/-----------+    +---\+
+    //      |        /                      \
+    //      |   +---/+                      +\---+
+    //    D |   | w6 |                      | w8 |
+    //      |   +----+                      +----+
     //
-    it('inverts the group order within a shard', () => {
+    it('places a dependent op in a new group at the end of the shard list', () => {
       let w1 = schedule.add('B', [])
       let w2 = schedule.add('A', [w1])
       let w3 = schedule.add('B', [w2])
@@ -949,93 +980,93 @@ describe('Schedule', () => {
         g2: ['A', [w2], ['g1']],
         g3: ['B', [w3], ['g2']],
         g4: ['C', [w4], ['g3']],
-        g5: ['D', [w8, w6], ['g4']],
-        g6: ['C', [w5, w7], ['g1', 'g5']]
+        g5: ['D', [w6], []],
+        g6: ['C', [w7, w5], ['g1', 'g5']],
+        g7: ['D', [w8], ['g4']]
       })
 
-      assertShardList(schedule, 'C', [w4], [w5, w7])
+      assertShardList(schedule, 'C', [w7, w5], [w4])
+      assertShardList(schedule, 'D', [w6], [w8])
     })
 
-    //      |        +----+
-    //    A |        | w2 |
-    //      |        +/--\+
-    //      |        /    \
-    //      |   +---/+    +\---+
-    //    B |   | w1 |    | w3 |
-    //      |   +---\+    +---\+
-    //      |        \         \
-    //      |         '---------\-------------------------.
-    //      |                    \                         \
-    //      |                    +\-----------+    +--------\---+
-    //    C |                    | w4 ---- w9 |    | w7      w5 |
-    //      |                    +---\--------+    +/-----------+
-    //      |                         \            /
-    //      |                         +\----------/+
-    //    D |                         | w8      w6 |
-    //      |                         +------------+
+    //      |                +----+
+    //    A |                | w2 |
+    //      |                +/--\+
+    //      |                /    \
+    //      |           +---/+    +\---+
+    //    B |           | w1 |    | w3 |
+    //      |           +---\+    +---\+
+    //      |                \         \
+    //      |        +--------\---+    +\---+
+    //    C |        | w7      w8 |    | w4 |
+    //      |        +/-----------+    +---\+
+    //      |        /                      \
+    //      |   +---/+                      +\---+
+    //    D |   | w6 |                      | w5 |
+    //      |   +----+                      +----+
     //
-    it('adds an operation to an early group after shard inversion', () => {
+    it('gives the same result for a second order of operations', () => {
       let w1 = schedule.add('B', [])
       let w2 = schedule.add('A', [w1])
       let w3 = schedule.add('B', [w2])
       let w4 = schedule.add('C', [w3])
-      let w5 = schedule.add('C', [w1])
+      let w5 = schedule.add('D', [w4])
       let w6 = schedule.add('D', [])
       let w7 = schedule.add('C', [w6])
-      let w8 = schedule.add('D', [w4])
-      let w9 = schedule.add('C', [w4])
-
-      assertGraph(schedule, {
-        g1: ['B', [w1], []],
-        g2: ['A', [w2], ['g1']],
-        g3: ['B', [w3], ['g2']],
-        g4: ['C', [w4, w9], ['g3']],
-        g5: ['D', [w8, w6], ['g4']],
-        g6: ['C', [w7, w5], ['g1', 'g5']]
-      })
-
-      assertShardList(schedule, 'C', [w4, w9], [w7, w5])
-    })
-
-    //      |        +----+
-    //    A |        | w2 |
-    //      |        +/--\+
-    //      |        /    \
-    //      |   +---/+    +\---+
-    //    B |   | w1 |    | w3 |
-    //      |   +---\+    +---\+
-    //      |        \         \
-    //      |         '---------\---------.
-    //      |                    \         \
-    //      |                    +\---+    +\-------------------+
-    //    C |                    | w4 |    | w5 ---- w9      w7 |
-    //      |                    +---\+    +----------------/---+
-    //      |                         \                    /
-    //      |                         +\-----------+      /
-    //    D |                         | w8      w6 ------'
-    //      |                         +------------+
-    //
-    it('adds an operation to a late group after shard inversion', () => {
-      let w1 = schedule.add('B', [])
-      let w2 = schedule.add('A', [w1])
-      let w3 = schedule.add('B', [w2])
-      let w4 = schedule.add('C', [w3])
-      let w5 = schedule.add('C', [w1])
-      let w6 = schedule.add('D', [])
-      let w7 = schedule.add('C', [w6])
-      let w8 = schedule.add('D', [w4])
-      let w9 = schedule.add('C', [w5])
+      let w8 = schedule.add('C', [w1])
 
       assertGraph(schedule, {
         g1: ['B', [w1], []],
         g2: ['A', [w2], ['g1']],
         g3: ['B', [w3], ['g2']],
         g4: ['C', [w4], ['g3']],
-        g5: ['D', [w8, w6], ['g4']],
-        g6: ['C', [w5, w9, w7], ['g1', 'g5']]
+        g5: ['D', [w6], []],
+        g6: ['C', [w7, w8], ['g1', 'g5']],
+        g7: ['D', [w5], ['g4']]
       })
 
-      assertShardList(schedule, 'C', [w4], [w5, w9, w7])
+      assertShardList(schedule, 'C', [w7, w8], [w4])
+      assertShardList(schedule, 'D', [w6], [w5])
+    })
+
+    //      |                +----+
+    //    A |                | w2 |
+    //      |                +/--\+
+    //      |                /    \
+    //      |           +---/+    +\---+
+    //    B |           | w1 |    | w3 |
+    //      |           +---\+    +---\+
+    //      |                \         \
+    //      |        +--------\---+    +\---+
+    //    C |        | w8      w7 |    | w4 |
+    //      |        +/-----------+    +---\+
+    //      |        /                      \
+    //      |   +---/+                      +\---+
+    //    D |   | w6 |                      | w5 |
+    //      |   +----+                      +----+
+    //
+    it('gives the same result for a third order of operations', () => {
+      let w1 = schedule.add('B', [])
+      let w2 = schedule.add('A', [w1])
+      let w3 = schedule.add('B', [w2])
+      let w4 = schedule.add('C', [w3])
+      let w5 = schedule.add('D', [w4])
+      let w6 = schedule.add('D', [])
+      let w7 = schedule.add('C', [w1])
+      let w8 = schedule.add('C', [w6])
+
+      assertGraph(schedule, {
+        g1: ['B', [w1], []],
+        g2: ['A', [w2], ['g1']],
+        g3: ['B', [w3], ['g2']],
+        g4: ['C', [w4], ['g3']],
+        g5: ['D', [w6], []],
+        g6: ['C', [w8, w7], ['g1', 'g5']],
+        g7: ['D', [w5], ['g4']]
+      })
+
+      assertShardList(schedule, 'C', [w8, w7], [w4])
+      assertShardList(schedule, 'D', [w6], [w5])
     })
   })
 })
