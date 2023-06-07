@@ -1213,5 +1213,50 @@ describe('Schedule', () => {
       group = schedule.nextGroup()
       assert.isNull(group)
     })
+
+    it('does not recycle operation IDs', () => {
+      let group = schedule.nextGroup()
+      assert.deepEqual(group.values(), ['val 1', 'val 3'])
+      group.started()
+      group.completed()
+
+      let w7 = schedule.add('C', [])
+
+      assert.isFalse([w1, w2, w3, w4, w5, w6].some((id) => id === w7))
+    })
+
+    //      |   +------------+
+    //    A |   | w4      w5 |
+    //      |   +-----------\+
+    //      |                \
+    //      |                +\---+
+    //    B |                | w6 |
+    //      |                +----+
+    //      |
+    //      |   +    +    +----+
+    //    C |     w2      | w7 |
+    //      |   +    +    +----+
+    //
+    it('creates a new group if no existing group is available', () => {
+      let group = schedule.nextGroup()
+      assert.deepEqual(group.values(), ['val 1', 'val 3'])
+      group.started()
+      group.completed()
+
+      group = schedule.nextGroup()
+      assert.deepEqual(group.values(), ['val 2'])
+      group.started()
+
+      let w7 = schedule.add('C', [])
+
+      assertGraph(schedule, {
+        g1: ['C', [w2]],
+        g2: ['C', [w7]],
+        g3: ['A', [w4, w5]],
+        g4: ['B', [w6], ['g3']]
+      })
+
+      assertShardList(schedule, 'C', [w2], [w7])
+    })
   })
 })
