@@ -742,6 +742,41 @@ describe('Schedule', () => {
       assertShardList(schedule, 'B', [w1, w5], [w4])
     })
 
+    //      |             +----+
+    //    A |             | w3 |
+    //      |             +/--\+
+    //      |             /    \
+    //      |        +---/+     \
+    //    B |        | w2 |      \
+    //      |        +/---+       \
+    //      |        /             \
+    //      |   +---/--------+     +\---+
+    //    C |   | w1      w6 |     | w4 |
+    //      |   +--------/---+     +----+
+    //      |           /
+    //      |      +---/+
+    //    D |      | w5 |
+    //      |      +----+
+    //
+    it('places an op in a group with the closest depth', () => {
+      let w1 = schedule.add('C', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('A', [w2])
+      let w4 = schedule.add('C', [w3])
+      let w5 = schedule.add('D', [])
+      let w6 = schedule.add('C', [w5])
+
+      assertGraph(schedule, {
+        g1: ['D', [w5]],
+        g2: ['C', [w1, w6], ['g1']],
+        g3: ['B', [w2], ['g2']],
+        g4: ['A', [w3], ['g3']],
+        g5: ['C', [w4], ['g4']]
+      })
+
+      assertShardList(schedule, 'C', [w1, w6], [w4])
+    })
+
     //      |        +------------+
     //    A |        | w2      w3 |
     //      |        +/----------\+
