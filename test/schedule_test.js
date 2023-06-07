@@ -1258,5 +1258,62 @@ describe('Schedule', () => {
 
       assertShardList(schedule, 'C', [w2], [w7])
     })
+
+    //      |   +----+
+    //    A |   | w5 |
+    //      |   +---\+
+    //      |        \
+    //      |        +\---+
+    //    B |        | w6 |
+    //      |        +----+
+    //      |
+    //      |   +----+
+    //    C |   |    |
+    //      |   +----+
+    //
+    it('removes downstream operations for a group that fails', () => {
+      let group = schedule.nextGroup()
+      group.started()
+      group.failed()
+
+      assertGraph(schedule, {
+        g1: ['A', [w5]],
+        g2: ['B', [w6], ['g1']],
+        g3: ['C', []]
+      })
+    })
+
+    //      |                +------------+
+    //    A |                | w4      w5 |
+    //      |                +/--\-------\+
+    //      |                /    \       \
+    //      |   +-----------/+    +\-------\---+
+    //    B |   | w1      w3 |    | w7      w6 |
+    //      |   +---\--------+    +------------+
+    //      |        \
+    //      |        +\---+
+    //    C |        | w2 |
+    //      |        +----+
+    //
+    it('removes all downstream operations for a failed group', () => {
+      let w7 = schedule.add('B', [w4])
+
+      assertGraph(schedule, {
+        g1: ['B', [w1, w3]],
+        g2: ['C', [w2], ['g1']],
+        g3: ['A', [w4, w5], ['g1']],
+        g4: ['B', [w7, w6], ['g3']]
+      })
+
+      let group = schedule.nextGroup()
+      group.started()
+      group.failed()
+
+      assertGraph(schedule, {
+        g1: ['A', [w5]],
+        g2: ['B', [w6], ['g1']],
+        g3: ['C', []]
+      })
+    })
   })
 })
