@@ -1149,7 +1149,7 @@ describe('Schedule', () => {
 
     it('returns the first available group', () => {
       let group = schedule.nextGroup()
-      assert.deepEqual(group.values(), ['val 1', 'val 3'])
+      assert.deepEqual([...group.values()], ['val 1', 'val 3'])
     })
 
     it('returns null when no more groups are available', () => {
@@ -1203,11 +1203,11 @@ describe('Schedule', () => {
       group.completed()
 
       group = schedule.nextGroup()
-      assert.deepEqual(group.values(), ['val 2'])
+      assert.deepEqual([...group.values()], ['val 2'])
       group.started()
 
       group = schedule.nextGroup()
-      assert.deepEqual(group.values(), ['val 4', 'val 5'])
+      assert.deepEqual([...group.values()], ['val 4', 'val 5'])
       group.started()
 
       group = schedule.nextGroup()
@@ -1216,7 +1216,7 @@ describe('Schedule', () => {
 
     it('does not recycle operation IDs', () => {
       let group = schedule.nextGroup()
-      assert.deepEqual(group.values(), ['val 1', 'val 3'])
+      assert.deepEqual([...group.values()], ['val 1', 'val 3'])
       group.started()
       group.completed()
 
@@ -1239,12 +1239,12 @@ describe('Schedule', () => {
     //
     it('creates a new group if no existing group is available', () => {
       let group = schedule.nextGroup()
-      assert.deepEqual(group.values(), ['val 1', 'val 3'])
+      assert.deepEqual([...group.values()], ['val 1', 'val 3'])
       group.started()
       group.completed()
 
       group = schedule.nextGroup()
-      assert.deepEqual(group.values(), ['val 2'])
+      assert.deepEqual([...group.values()], ['val 2'])
       group.started()
 
       let w7 = schedule.add('C', [])
