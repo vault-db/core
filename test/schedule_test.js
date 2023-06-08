@@ -1103,6 +1103,92 @@ describe('Schedule', () => {
       assertShardList(schedule, 'C', [w8, w7], [w4])
       assertShardList(schedule, 'D', [w6], [w5])
     })
+
+    //      |             +-------------+
+    //    A |             | w3       w5 |
+    //      |             +/--------/---+
+    //      |             /        /
+    //      |        +---/+       /
+    //    B |        | w2 |      /
+    //      |        +/--\+     /
+    //      |        /    \    /
+    //      |   +---/+    +\--/+
+    //    C |   | w1 |    | w4 |
+    //      |   +----+    +----+
+    //
+    it('merges operations with a common ancestor that are not mutually dependent', () => {
+      let w1 = schedule.add('C', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('A', [w2])
+      let w4 = schedule.add('C', [w2])
+      let w5 = schedule.add('A', [w4])
+
+      assertGraph(schedule, {
+        g1: ['C', [w1]],
+        g2: ['B', [w2], ['g1']],
+        g3: ['C', [w4], ['g2']],
+        g4: ['A', [w3, w5], ['g2', 'g3']]
+      })
+    })
+
+    //      |             +--------------+
+    //    A |             | w3        w6 |
+    //      |             +/---------/---+
+    //      |             /         /
+    //      |        +---/+    +---/+
+    //    B |        | w2 |    | w5 |
+    //      |        +/--\+    +/---+
+    //      |        /    \    /
+    //      |   +---/+    +\--/+
+    //    C |   | w1 |    | w4 |
+    //      |   +----+    +----+
+    //
+    it('merges an operation added at the end of a shard list', () => {
+      let w1 = schedule.add('C', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('A', [w2])
+      let w4 = schedule.add('C', [w2])
+      let w5 = schedule.add('B', [w4])
+      let w6 = schedule.add('A', [w5])
+
+      assertGraph(schedule, {
+        g1: ['C', [w1]],
+        g2: ['B', [w2], ['g1']],
+        g3: ['C', [w4], ['g2']],
+        g4: ['B', [w5], ['g3']],
+        g5: ['A', [w3, w6], ['g2', 'g4']]
+      })
+    })
+
+    //      |             +----+    +----+
+    //    A |             | w6 |    | w5 |
+    //      |             +/---+    +/---+
+    //      |             /         /
+    //      |        +---/+    +---/+
+    //    B |        | w2 |    | w4 |
+    //      |        +/--\+    +/---+
+    //      |        /    \    /
+    //      |   +---/+    +\--/+
+    //    C |   | w1 |    | w3 |
+    //      |   +----+    +----+
+    //
+    it('does not merge an operation added in the middle of a shard list', () => {
+      let w1 = schedule.add('C', [])
+      let w2 = schedule.add('B', [w1])
+      let w3 = schedule.add('C', [w2])
+      let w4 = schedule.add('B', [w3])
+      let w5 = schedule.add('A', [w4])
+      let w6 = schedule.add('A', [w2])
+
+      assertGraph(schedule, {
+        g1: ['C', [w1]],
+        g2: ['B', [w2], ['g1']],
+        g3: ['C', [w3], ['g2']],
+        g4: ['B', [w4], ['g3']],
+        g5: ['A', [w5], ['g4']],
+        g6: ['A', [w6], ['g2']]
+      })
+    })
   })
 
   describe('consumer interface', () => {
