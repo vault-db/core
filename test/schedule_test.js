@@ -1400,6 +1400,26 @@ describe('Schedule', () => {
       })
     })
 
+    //      |   +    +      +----+
+    //    A |     w1        | w2 |
+    //      |   +    +      +----+
+    //
+    it('prevents concurrent processing of groups on the same shard', () => {
+      let schedule = new Schedule()
+
+      let w1 = schedule.add('A', [], 'val 1')
+      let group = schedule.nextGroup().started()
+      assert.deepEqual([...group.values()], ['val 1'])
+
+      let w2 = schedule.add('A', [], 'val 2')
+      assert.isNull(schedule.nextGroup())
+
+      group.completed()
+
+      group = schedule.nextGroup()
+      assert.deepEqual([...group.values()], ['val 2'])
+    })
+
     //      |   +------------+
     //    A |   | w1 ---- w2 |
     //      |   +---\--------+
