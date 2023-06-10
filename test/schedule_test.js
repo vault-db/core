@@ -1238,6 +1238,11 @@ describe('Schedule', () => {
       assert.deepEqual([...group.values()], ['val 1', 'val 3'])
     })
 
+    it('returns the shard the group belongs to', () => {
+      let group = schedule.nextGroup()
+      assert.equal(group.getShard(), 'B')
+    })
+
     it('returns null when no more groups are available', () => {
       schedule.nextGroup().started()
       assert.isNull(schedule.nextGroup())
