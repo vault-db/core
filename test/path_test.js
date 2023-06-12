@@ -1,6 +1,6 @@
 'use strict'
 
-const Path = require('../lib/path')
+const { Path } = require('../lib/path')
 const { assert } = require('chai')
 
 describe('Path', () => {
