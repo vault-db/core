@@ -1583,6 +1583,77 @@ describe('Schedule', () => {
 
       assertShardList(schedule, 'C', [w8, w10])
     })
+
+    //      |                +----+
+    //    A |                | w2 |
+    //      |                +/--\+
+    //      |                /    \
+    //      |           +---/+    +\---+
+    //    B |           | w1 |    | w3 |
+    //      |           +----+    +---\+
+    //      |                          \
+    //      |        +------------+    +\---+
+    //    C |        | w7      w5 |    | w4 |
+    //      |        +/-----------+    +----+
+    //      |        /
+    //      |   +---/+
+    //    D |   | w6 |
+    //      |   +----+
+    //
+    it('allows any dependency-free group in a shard to be processed next', () => {
+      let schedule = new Schedule()
+
+      let w1 = schedule.add('B', [], 'val 1')
+      let w2 = schedule.add('A', [w1], 'val 2')
+      let w3 = schedule.add('B', [w2], 'val 3')
+      let w4 = schedule.add('C', [w3], 'val 4')
+
+      let w5 = schedule.add('C', [], 'val 5')
+      let w6 = schedule.add('D', [], 'val 6')
+      let w7 = schedule.add('C', [w6], 'val 7')
+
+      assertGraph(schedule, {
+        g1: ['B', [w1]],
+        g2: ['A', [w2], ['g1']],
+        g3: ['B', [w3], ['g2']],
+        g4: ['C', [w4], ['g3']],
+        g5: ['D', [w6]],
+        g6: ['C', [w7, w5], ['g5']]
+      })
+
+      assertShardList(schedule, 'C', [w7, w5], [w4])
+
+      let group1 = schedule.nextGroup().started()
+      assert.deepEqual([...group1.values()], ['val 1'])
+
+      let group2 = schedule.nextGroup().started()
+      assert.deepEqual([...group2.values()], ['val 6'])
+
+      group1.completed()
+
+      group1 = schedule.nextGroup().started()
+      assert.deepEqual([...group1.values()], ['val 2'])
+
+      group1.completed()
+
+      group1 = schedule.nextGroup().started()
+      assert.deepEqual([...group1.values()], ['val 3'])
+
+      group1.completed()
+
+      group1 = schedule.nextGroup().started()
+      assert.deepEqual([...group1.values()], ['val 4'])
+
+      group2.completed()
+
+      group2 = schedule.nextGroup()
+      assert.isNull(group2)
+
+      group1.completed()
+
+      group2 = schedule.nextGroup()
+      assert.deepEqual([...group2.values()], ['val 5', 'val 7'])
+    })
   })
 
   describe('group handles', () => {
