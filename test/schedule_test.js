@@ -42,7 +42,7 @@ function findGroup (groups, shard, ops) {
 }
 
 function assertShardList (schedule, shard, ...expected) {
-  let groups = schedule._shards.get(shard)
+  let { groups } = schedule._shards.get(shard)
 
   assert.equal(groups.length, expected.length,
     `shard '${shard}' expected to have ${expected.length} groups but had ${groups.length}`)
@@ -1733,6 +1733,32 @@ describe('Schedule', () => {
       })
 
       assert.throws(() => group2.started())
+    })
+
+    it('preserves the shard request state when a group fails', () => {
+      let group1 = schedule.nextGroup().started()
+      let group2 = schedule.nextGroup().started()
+
+      let w5 = schedule.add('C', [], 'val 5')
+
+      group1.failed()
+
+      assertGraph(schedule, {
+        g1: ['B', [w4]],
+        g2: ['C', [w2]],
+        g3: ['C', [w5]]
+      })
+
+      let group = schedule.nextGroup().started()
+      assert.deepEqual([...group.values()], ['val 4'])
+
+      group = schedule.nextGroup()
+      assert.isNull(group)
+
+      group2.completed()
+
+      group = schedule.nextGroup()
+      assert.deepEqual([...group.values()], ['val 5'])
     })
   })
 })
