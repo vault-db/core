@@ -207,10 +207,28 @@ describe('Task', () => {
       assert.deepEqual(await checker.list('/'), ['path/'])
     })
 
+    it('does not remove a directory if a non-existent item is removed', async () => {
+      await task.remove('/path/to/nested/a')
+
+      assert.deepEqual(await checker.list('/path/nested/to/'), ['z'])
+      assert.deepEqual(await checker.list('/path/nested/'), ['to/'])
+    })
+
     it('removes a parent directory if two clients independently remove its items', async () => {
       await Promise.all([
         newTask().remove('/path/to/x'),
         newTask().remove('/path/to/y')
+      ])
+
+      assert.isNull(await checker.list('/path/to/'))
+      assert.deepEqual(await checker.list('/path/'), ['nested/'])
+      assert.deepEqual(await checker.list('/'), ['path/'])
+    })
+
+    it('removes a parent directory if one client removes its items', async () => {
+      await Promise.all([
+        task.remove('/path/to/x'),
+        task.remove('/path/to/y')
       ])
 
       assert.isNull(await checker.list('/path/to/'))
@@ -228,6 +246,33 @@ describe('Task', () => {
       for (let dir of ['/', '/path/', '/path/nested/', '/path/to/']) {
         assert.isNull(await checker.list(dir))
       }
+    })
+
+    it('lets a single task fully empty the storage', async () => {
+      await Promise.all([
+        task.remove('/path/to/x'),
+        task.remove('/path/to/y'),
+        task.remove('/path/nested/to/z')
+      ])
+
+      for (let dir of ['/', '/path/', '/path/nested/', '/path/to/']) {
+        assert.isNull(await checker.list(dir))
+      }
+    })
+
+    it('only removes directories that are genuinely empty', async () => {
+      await Promise.all([
+        task.remove('/path/to/x'),
+        task.update('/path/to/a', () => ({ a: 1 })),
+        task.remove('/path/to/y'),
+        task.remove('/path/nested/to/z')
+      ])
+
+      assert.deepEqual(await checker.list('/'), ['path/'])
+      assert.deepEqual(await checker.list('/path/'), ['to/'])
+      assert.deepEqual(await checker.list('/path/to/'), ['a'])
+
+      assert.isNull(await checker.list('/path/nested/'))
     })
   })
 })
