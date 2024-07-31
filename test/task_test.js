@@ -116,4 +116,53 @@ describe('Task', () => {
       assert.deepEqual(doc, { a: 1, b: 2, c: 3 })
     })
   })
+
+  describe('find()', () => {
+    async function find (path) {
+      let docs = []
+      for await (let doc of checker.find(path)) {
+        docs.push(doc)
+      }
+      return docs
+    }
+
+    beforeEach(async () => {
+      await Promise.all([
+        task.update('/a', () => ({ a: 1 })),
+        task.update('/path/b', () => ({ b: 2 })),
+        task.update('/path/c', () => ({ c: 3 })),
+        task.update('/path/to/nested/d', () => ({ d: 4 }))
+      ])
+    })
+
+    it('returns the paths of all the docs', async () => {
+      assert.deepEqual(await find('/'), [
+        '/a',
+        '/path/b',
+        '/path/c',
+        '/path/to/nested/d'
+      ])
+    })
+
+    it('returns the docs inside a specific directory', async () => {
+      assert.deepEqual(await find('/path/'), [
+        '/path/b',
+        '/path/c',
+        '/path/to/nested/d'
+      ])
+
+      assert.deepEqual(await find('/path/to/'), [
+        '/path/to/nested/d'
+      ])
+    })
+
+    it('returns an empty list for a non-existent directory', async () => {
+      assert.deepEqual(await find('/none/'), [])
+    })
+
+    it('throws an error for a non-dir path', async () => {
+      let error = await find('/path').catch(e => e)
+      assert.equal(error.code, 'ERR_INVALID_PATH')
+    })
+  })
 })
