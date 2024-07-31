@@ -64,6 +64,11 @@ describe('Task', () => {
   })
 
   describe('update()', () => {
+    it('throws an error for a non-doc path', async () => {
+      let error = await task.update('/path/', () => {}).catch(e => e)
+      assert.equal(error.code, 'ERR_INVALID_PATH')
+    })
+
     it('exposes an error when writing a shard', async () => {
       store.write = () => Promise.reject(new Error('oh no'))
 
@@ -175,6 +180,11 @@ describe('Task', () => {
         writer.update('/path/to/y', () => ({ b: 2 })),
         writer.update('/path/nested/to/z', () => ({ c: 3 }))
       ])
+    })
+
+    it('throws an error for a non-doc path', async () => {
+      let error = await task.remove('/path/').catch(e => e)
+      assert.equal(error.code, 'ERR_INVALID_PATH')
     })
 
     it('removes a document', async () => {
