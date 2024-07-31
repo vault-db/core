@@ -19,6 +19,14 @@ describe('Task', () => {
     return 'shard-' + (hash.digest()[0] % 4)
   }
 
+  async function find (path) {
+    let docs = []
+    for await (let doc of checker.find(path)) {
+      docs.push(doc)
+    }
+    return docs
+  }
+
   beforeEach(() => {
     store = new MemoryAdapter()
     task = newTask()
@@ -118,14 +126,6 @@ describe('Task', () => {
   })
 
   describe('find()', () => {
-    async function find (path) {
-      let docs = []
-      for await (let doc of checker.find(path)) {
-        docs.push(doc)
-      }
-      return docs
-    }
-
     beforeEach(async () => {
       await Promise.all([
         task.update('/a', () => ({ a: 1 })),
@@ -273,6 +273,37 @@ describe('Task', () => {
       assert.deepEqual(await checker.list('/path/to/'), ['a'])
 
       assert.isNull(await checker.list('/path/nested/'))
+    })
+  })
+
+  describe('prune()', () => {
+    beforeEach(async () => {
+      await Promise.all([
+        task.update('/a', () => ({ a: 1 })),
+        task.update('/path/b', () => ({ b: 2 })),
+        task.update('/path/c', () => ({ c: 3 })),
+        task.update('/path/to/nested/d', () => ({ d: 4 }))
+      ])
+    })
+
+    it('removes all docs', async () => {
+      await task.prune('/')
+      assert.deepEqual(await find('/'), [])
+    })
+
+    it('removes the docs from a directory', async () => {
+      await task.prune('/path/')
+      assert.deepEqual(await find('/'), ['/a'])
+    })
+
+    it('removes the docs from a nested directory', async () => {
+      await task.prune('/path/to/')
+      assert.deepEqual(await find('/'), ['/a', '/path/b', '/path/c'])
+    })
+
+    it('throws an error for a non-dir path', async () => {
+      let error = await task.prune('/path').catch(e => e)
+      assert.equal(error.code, 'ERR_INVALID_PATH')
     })
   })
 })
