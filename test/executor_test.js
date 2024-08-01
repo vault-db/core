@@ -212,7 +212,7 @@ describe('Executor', () => {
       let dir = await cache.read('A').then((s) => s.list('/'))
       let doc = await cache.read('B').then((s) => s.get('/doc'))
 
-      assert.isFalse(doc !== null && !dir.includes('doc'))
+      assert.isTrue(doc === null || dir.includes('doc'))
     })
   })
 })
