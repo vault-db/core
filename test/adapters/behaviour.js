@@ -9,6 +9,10 @@ function testAdapterBehaviour (config) {
     adapter = config.createAdapter()
   })
 
+  afterEach(async () => {
+    if (config.cleanup) await config.cleanup()
+  })
+
   it('returns null for an unknown key', async () => {
     let result = await adapter.read('x')
     assert.isNull(result)
@@ -65,6 +69,24 @@ function testAdapterBehaviour (config) {
 
     let error = await adapter.write('x', 'world', 64).catch(e => e)
     assert.strictEqual(error.code, 'ERR_CONFLICT')
+  })
+
+  it('only allows one concurrent write to succeed', async () => {
+    await adapter.write('x', 'hello')
+    let { rev } = await adapter.read('x')
+
+    let [w1, w2] = await Promise.all([
+      adapter.write('x', 'world', rev).catch(e => e),
+      adapter.write('x', 'other', rev).catch(e => e)
+    ])
+
+    let [passed, failed] = w1.rev ? [w1, w2] : [w2, w1]
+
+    assert.notEqual(passed.rev, undefined)
+    assert.strictEqual(failed.code, 'ERR_CONFLICT')
+
+    let result = await adapter.read('x')
+    assert.strictEqual(result.value, w1.rev ? 'world' : 'other')
   })
 }
 
