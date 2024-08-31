@@ -1,12 +1,15 @@
 'use strict'
 
+const FileAdapter = require('../lib/adapters/file')
 const MemoryAdapter = require('../lib/adapters/memory')
 const Task = require('../lib/task')
 
 const { assert } = require('chai')
 const crypto = require('crypto')
+const fs = require('fs').promises
+const path = require('path')
 
-describe('Task', () => {
+function testTaskBehaviour (config) {
   let store, task, checker
 
   function newTask () {
@@ -28,9 +31,13 @@ describe('Task', () => {
   }
 
   beforeEach(() => {
-    store = new MemoryAdapter()
+    store = config.createAdapter()
     task = newTask()
     checker = newTask()
+  })
+
+  afterEach(async () => {
+    if (config.cleanup) await config.cleanup()
   })
 
   it('throws an error for getting an invalid path', async () => {
@@ -315,5 +322,28 @@ describe('Task', () => {
       let error = await task.prune('/path').catch(e => e)
       assert.equal(error.code, 'ERR_INVALID_PATH')
     })
+  })
+}
+
+describe('Task (Memory)', () => {
+  testTaskBehaviour({
+    createAdapter () {
+      return new MemoryAdapter()
+    }
+  })
+})
+
+const STORE_PATH = path.resolve(__dirname, '..', 'tmp', 'task-file')
+
+describe('Task (File)', () => {
+  testTaskBehaviour({
+    createAdapter () {
+      return new FileAdapter(STORE_PATH)
+    },
+
+    async cleanup () {
+      let fn = fs.rm ? 'rm' : 'rmdir'
+      await fs[fn](STORE_PATH, { recursive: true }).catch(e => e)
+    }
   })
 })
