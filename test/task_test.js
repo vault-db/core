@@ -1,5 +1,6 @@
 'use strict'
 
+const Cache = require('../lib/cache')
 const FileAdapter = require('../lib/adapters/file')
 const MemoryAdapter = require('../lib/adapters/memory')
 const Task = require('../lib/task')
@@ -8,6 +9,8 @@ const { assert } = require('chai')
 const crypto = require('crypto')
 const fs = require('fs').promises
 const path = require('path')
+
+const SHARD_KEY = crypto.randomBytes(16)
 
 function testTaskBehaviour (config) {
   let store, task, checker
@@ -18,6 +21,7 @@ function testTaskBehaviour (config) {
 
   function router (path) {
     let hash = crypto.createHash('sha256')
+    hash.update(SHARD_KEY)
     hash.update(path)
     return 'shard-' + (hash.digest()[0] % 4)
   }
@@ -290,6 +294,35 @@ function testTaskBehaviour (config) {
       assert.deepEqual(await checker.list('/path/to/'), ['a'])
 
       assert.isNull(await checker.list('/path/nested/'))
+    })
+  })
+
+  describe('remove() after partial failure', () => {
+    beforeEach(async () => {
+      let cache = new Cache(store)
+
+      let id = await router('/')
+      let shard = await cache.read(id)
+      shard.link('/', 'path/')
+      await cache.write(id)
+
+      id = await router('/path/')
+      shard = await cache.read(id)
+      shard.link('/path/', 'a/')
+      shard.link('/path/', 'b/')
+      await cache.write(id)
+    })
+
+    it('completes cleaning up the tree', async () => {
+      await Promise.all([
+        newTask().remove('/path/a/1'),
+        newTask().remove('/path/b/2')
+      ])
+
+      assert.isNull(await checker.list('/'))
+      assert.isNull(await checker.list('/path/'))
+      assert.isNull(await checker.list('/path/a/'))
+      assert.isNull(await checker.list('/path/b/'))
     })
   })
 
