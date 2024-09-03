@@ -3,27 +3,18 @@
 const Cache = require('../lib/cache')
 const FileAdapter = require('../lib/adapters/file')
 const MemoryAdapter = require('../lib/adapters/memory')
+const Router = require('../lib/router')
 const Task = require('../lib/task')
 
 const { assert } = require('chai')
-const crypto = require('crypto')
 const fs = require('fs').promises
 const path = require('path')
 
-const SHARD_KEY = crypto.randomBytes(16)
-
 function testTaskBehaviour (config) {
-  let store, task, checker
+  let router, store, task, checker
 
   function newTask () {
     return new Task(store, router)
-  }
-
-  function router (path) {
-    let hash = crypto.createHash('sha256')
-    hash.update(SHARD_KEY)
-    hash.update(path)
-    return 'shard-' + (hash.digest()[0] % 4)
   }
 
   async function find (path) {
@@ -34,7 +25,8 @@ function testTaskBehaviour (config) {
     return docs
   }
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    router = new Router({ level: 2, key: await Router.generateKey() })
     store = config.createAdapter()
     task = newTask()
     checker = newTask()
@@ -301,12 +293,12 @@ function testTaskBehaviour (config) {
     beforeEach(async () => {
       let cache = new Cache(store)
 
-      let id = await router('/')
+      let id = await router.getShardId('/')
       let shard = await cache.read(id)
       shard.link('/', 'path/')
       await cache.write(id)
 
-      id = await router('/path/')
+      id = await router.getShardId('/path/')
       shard = await cache.read(id)
       shard.link('/path/', 'a/')
       shard.link('/path/', 'b/')
