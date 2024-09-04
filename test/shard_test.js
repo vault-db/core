@@ -36,6 +36,15 @@ describe('Shard', () => {
     assert.deepEqual(await shard.list('/'), ['doc.txt'])
   })
 
+  it('can return a shared reference to the directory contents', async () => {
+    await shard.link('/', 'doc.txt')
+
+    let dir = await shard.list('/', { shared: true })
+    dir.push('extra')
+
+    assert.deepEqual(await shard.list('/'), ['doc.txt', 'extra'])
+  })
+
   it('removes an item from a directory', async () => {
     await shard.link('/', 'a')
     await shard.link('/', 'b')
@@ -49,6 +58,23 @@ describe('Shard', () => {
     await shard.unlink('/', 'a')
 
     assert.isNull(await shard.list('/'))
+  })
+
+  it('removes an item in a shared list', async () => {
+    await shard.link('/', 'a')
+    await shard.link('/', 'b')
+    let list = await shard.list('/', { shared: true })
+    await shard.unlink('/', 'a')
+
+    assert.deepEqual(list, ['b'])
+  })
+
+  it('removes the final item in a shared list', async () => {
+    await shard.link('/', 'a')
+    let list = await shard.list('/', { shared: true })
+    await shard.unlink('/', 'a')
+
+    assert.deepEqual(list, [])
   })
 
   it('returns null for a non-existent document', async () => {

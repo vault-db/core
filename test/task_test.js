@@ -287,6 +287,16 @@ function testTaskBehaviour (config) {
 
       assert.isNull(await checker.list('/path/nested/'))
     })
+
+    it('links a new doc while a non-existent doc is removed', async () => {
+      await Promise.all([
+        task.remove('/new/a'),
+        task.update('/new/b', () => ({ b: 2 }))
+      ])
+
+      assert.deepEqual(await checker.list('/'), ['new/', 'path/'])
+      assert.deepEqual(await checker.list('/new/'), ['b'])
+    })
   })
 
   describe('remove() after partial failure', () => {
