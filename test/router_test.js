@@ -5,10 +5,8 @@ const { assert } = require('chai')
 
 describe('Router', () => {
   it('returns shard IDs at level 0', async () => {
-    let router = new Router({
-      level: 0,
-      key: 'pbSO59kb7ia4d6VxDXnRveysqDhPronSwiSxvm79zLE='
-    })
+    let key = 'dPKDVtT72E2hZd5shFi+iRCBCjBdXaP26EcsX+9PpgGG+WK8rGtU6ZPAz1AtL1B8tm88Wyp3I5dVflUMg0IY7Q=='
+    let router = new Router({ key, level: 0 })
 
     for (let n of 'abcdefghijklmnopqrstuvwxyz'.split('')) {
       assert.equal(await router.getShardId('/' + n), 'shard-0')
@@ -16,58 +14,50 @@ describe('Router', () => {
   })
 
   it('returns shard IDs at level 1', async () => {
-    let router = new Router({
-      level: 1,
-      key: 'K7L7kakbCauJr8UJUBoLqJORJ5NAaZWVLcF+JbkWZuU='
-    })
+    let key = 'frjOsNUsLE9VfIM7vtN5Yk/gdlYUpb8lZezpf9ES/NJTUYaeMuAysGGOvtzwVbv7ZdrSIbDDHYJi5+pDlDLsFA=='
+    let router = new Router({ key, level: 1 })
 
-    assert.equal(await router.getShardId('/v'), 'shard-0')
-    assert.equal(await router.getShardId('/e'), 'shard-0')
-    assert.equal(await router.getShardId('/a'), 'shard-1')
-    assert.equal(await router.getShardId('/i'), 'shard-1')
+    assert.equal(await router.getShardId('/a'), 'shard-0')
+    assert.equal(await router.getShardId('/b'), 'shard-0')
+    assert.equal(await router.getShardId('/d'), 'shard-1')
+    assert.equal(await router.getShardId('/g'), 'shard-1')
   })
 
   it('returns shard IDs at level 2', async () => {
-    let router = new Router({
-      level: 2,
-      key: '6MayVsj5QANQ5m/Xi+6usDr9BDVWR1AMIAg+Hn5Hva8='
-    })
+    let key = 'yNIdoAbi9oJtFuxsWw4lWxa82bQMrOs4VYtXTIc+tiNGE2W4gnaqsdbCLedoj2VA4oUtb24wgkFTow8Pol2Hig=='
+    let router = new Router({ key, level: 2 })
 
-    assert.equal(await router.getShardId('/v'), 'shard-0')
-    assert.equal(await router.getShardId('/e'), 'shard-1')
-    assert.equal(await router.getShardId('/a'), 'shard-2')
-    assert.equal(await router.getShardId('/i'), 'shard-3')
+    assert.equal(await router.getShardId('/a'), 'shard-1')
+    assert.equal(await router.getShardId('/b'), 'shard-3')
+    assert.equal(await router.getShardId('/c'), 'shard-2')
+    assert.equal(await router.getShardId('/g'), 'shard-0')
   })
 
   it('returns shard IDs at level 3', async () => {
-    let router = new Router({
-      level: 3,
-      key: 'FayHI3QaQHMZY2P4E/6+Ebqch8mOBWyk4Og1AcsAPGA='
-    })
+    let key = 'r6dXMLaJhaPcBK7u98fNHSr2SUrP9QItuwr+eZFXFJvVgRnS9xdBV4h2FkZHG1/cm6Eweg6BnppC7ueeeMweEg=='
+    let router = new Router({ key, level: 3 })
 
-    assert.equal(await router.getShardId('/i'), 'shard-0')
-    assert.equal(await router.getShardId('/v'), 'shard-1')
-    assert.equal(await router.getShardId('/e'), 'shard-2')
-    assert.equal(await router.getShardId('/l'), 'shard-3')
     assert.equal(await router.getShardId('/a'), 'shard-4')
-    assert.equal(await router.getShardId('/c'), 'shard-5')
-    assert.equal(await router.getShardId('/g'), 'shard-6')
-    assert.equal(await router.getShardId('/f'), 'shard-7')
+    assert.equal(await router.getShardId('/b'), 'shard-7')
+    assert.equal(await router.getShardId('/d'), 'shard-2')
+    assert.equal(await router.getShardId('/e'), 'shard-6')
+    assert.equal(await router.getShardId('/h'), 'shard-1')
+    assert.equal(await router.getShardId('/i'), 'shard-5')
+    assert.equal(await router.getShardId('/l'), 'shard-0')
+    assert.equal(await router.getShardId('/p'), 'shard-3')
   })
 
   it('returns shard IDs at level 5', async () => {
-    let router = new Router({
-      level: 5,
-      key: 'HbWo4+NpSzT9TQQ+4ntBf2EenisKzlCwpw/3ou3eTyM='
-    })
+    let key = 'v91VlCeE3rit6LGjhfW+Cc0Lv6kK0lwkg4cxZXDmDQ/VSCrvzd8pyZ4DpuOT6NGqxTOGQ7gc20NteLMbjWxGGA=='
+    let router = new Router({ key, level: 5 })
 
-    assert.equal(await router.getShardId('/a'), 'shard-1a')
-    assert.equal(await router.getShardId('/c'), 'shard-1e')
-    assert.equal(await router.getShardId('/e'), 'shard-14')
-    assert.equal(await router.getShardId('/f'), 'shard-02')
-    assert.equal(await router.getShardId('/g'), 'shard-00')
-    assert.equal(await router.getShardId('/i'), 'shard-0a')
-    assert.equal(await router.getShardId('/l'), 'shard-01')
-    assert.equal(await router.getShardId('/v'), 'shard-16')
+    assert.equal(await router.getShardId('/a'), 'shard-1d')
+    assert.equal(await router.getShardId('/b'), 'shard-11')
+    assert.equal(await router.getShardId('/d'), 'shard-1d')
+    assert.equal(await router.getShardId('/e'), 'shard-0e')
+    assert.equal(await router.getShardId('/h'), 'shard-07')
+    assert.equal(await router.getShardId('/i'), 'shard-04')
+    assert.equal(await router.getShardId('/l'), 'shard-0f')
+    assert.equal(await router.getShardId('/p'), 'shard-0a')
   })
 })
