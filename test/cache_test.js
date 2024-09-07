@@ -1,17 +1,20 @@
 'use strict'
 
 const Cache = require('../lib/cache')
-const MemoryAdapter = require('../lib/adapters/memory')
 const Shard = require('../lib/shard')
 
 const { assert } = require('chai')
 
-describe('Cache', () => {
+function testCacheBehaviour (config) {
   let adapter, cache
 
   beforeEach(() => {
-    adapter = new MemoryAdapter()
+    adapter = config.createAdapter()
     cache = new Cache(adapter)
+  })
+
+  afterEach(async () => {
+    if (config.cleanup) await config.cleanup()
   })
 
   async function readFromStore (id) {
@@ -161,5 +164,34 @@ describe('Cache', () => {
         assert.deepEqual(await shard.get('/path/doc.txt'), { p: 1 })
       })
     })
+  })
+}
+
+describe('Cache (Memory)', () => {
+  const MemoryAdapter = require('../lib/adapters/memory')
+
+  testCacheBehaviour({
+    createAdapter () {
+      return new MemoryAdapter()
+    }
+  })
+})
+
+describe('Cache (File)', () => {
+  const fs = require('fs').promises
+  const path = require('path')
+  const FileAdapter = require('../lib/adapters/file')
+
+  const STORE_PATH = path.resolve(__dirname, '..', 'tmp', 'cache-file')
+
+  testCacheBehaviour({
+    createAdapter () {
+      return new FileAdapter(STORE_PATH)
+    },
+
+    async cleanup () {
+      let fn = fs.rm ? 'rm' : 'rmdir'
+      await fs[fn](STORE_PATH, { recursive: true }).catch(e => e)
+    }
   })
 })

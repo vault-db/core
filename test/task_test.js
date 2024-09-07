@@ -1,14 +1,10 @@
 'use strict'
 
 const Cache = require('../lib/cache')
-const FileAdapter = require('../lib/adapters/file')
-const MemoryAdapter = require('../lib/adapters/memory')
 const Router = require('../lib/router')
 const Task = require('../lib/task')
 
 const { assert } = require('chai')
-const fs = require('fs').promises
-const path = require('path')
 
 function testTaskBehaviour (config) {
   let router, store, task, checker
@@ -361,6 +357,8 @@ function testTaskBehaviour (config) {
 }
 
 describe('Task (Memory)', () => {
+  const MemoryAdapter = require('../lib/adapters/memory')
+
   testTaskBehaviour({
     createAdapter () {
       return new MemoryAdapter()
@@ -368,9 +366,13 @@ describe('Task (Memory)', () => {
   })
 })
 
-const STORE_PATH = path.resolve(__dirname, '..', 'tmp', 'task-file')
-
 describe('Task (File)', () => {
+  const fs = require('fs').promises
+  const path = require('path')
+  const FileAdapter = require('../lib/adapters/file')
+
+  const STORE_PATH = path.resolve(__dirname, '..', 'tmp', 'task-file')
+
   testTaskBehaviour({
     createAdapter () {
       return new FileAdapter(STORE_PATH)

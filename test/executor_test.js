@@ -2,18 +2,21 @@
 
 const Cache = require('../lib/cache')
 const Executor = require('../lib/executor')
-const MemoryAdapter = require('../lib/adapters/memory')
 const Shard = require('../lib/shard')
 
 const { assert } = require('chai')
 
-describe('Executor', () => {
+function testExecutorBehaviour (config) {
   let store, executor, cache
 
   beforeEach(() => {
-    store = new MemoryAdapter()
+    store = config.createAdapter()
     executor = new Executor(new Cache(store))
     cache = new Cache(store)
+  })
+
+  afterEach(async () => {
+    if (config.cleanup) await config.cleanup()
   })
 
   it('executes a single change to a shard', async () => {
@@ -220,5 +223,34 @@ describe('Executor', () => {
 
       assert.isTrue(doc === null || dir.includes('doc'))
     })
+  })
+}
+
+describe('Executor (Memory)', () => {
+  const MemoryAdapter = require('../lib/adapters/memory')
+
+  testExecutorBehaviour({
+    createAdapter () {
+      return new MemoryAdapter()
+    }
+  })
+})
+
+describe('Executor (File)', () => {
+  const fs = require('fs').promises
+  const path = require('path')
+  const FileAdapter = require('../lib/adapters/file')
+
+  const STORE_PATH = path.resolve(__dirname, '..', 'tmp', 'executor-file')
+
+  testExecutorBehaviour({
+    createAdapter () {
+      return new FileAdapter(STORE_PATH)
+    },
+
+    async cleanup () {
+      let fn = fs.rm ? 'rm' : 'rmdir'
+      await fs[fn](STORE_PATH, { recursive: true }).catch(e => e)
+    }
   })
 })
