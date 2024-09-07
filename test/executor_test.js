@@ -196,13 +196,19 @@ describe('Executor', () => {
       let op2 = bob.add('A', [], (s) => s.link('/', 'y'))
       bob.poll()
 
-      await op1.promise
+      let [e1, e2] = await Promise.all([
+        op1.promise.catch(e => e),
+        op2.promise.catch(e => e)
+      ])
 
-      let error = await op2.promise.catch(e => e)
+      let [none, error] = e1 ? [e2, e1] : [e1, e2]
+
+      assert.isUndefined(none)
       assert.equal(error.code, 'ERR_CONFLICT')
 
       let dir = await cache.read('A').then((s) => s.list('/'))
-      assert.deepEqual(dir, ['doc', 'x'])
+      let item = (e1 === error) ? 'y' : 'x'
+      assert.deepEqual(dir, ['doc', item])
     })
 
     it('loads all shards before writing to prevent race conditions', async () => {
