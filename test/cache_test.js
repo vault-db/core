@@ -26,7 +26,7 @@ function testCacheBehaviour (config) {
     it('returns an new empty shard', async () => {
       let shard = await cache.read('x')
       assert.instanceOf(shard, Shard)
-      assert.equal(shard.size(), 0)
+      assert.equal(await shard.size(), 0)
     })
 
     it('writes a new shard to the adapter', async () => {
@@ -41,13 +41,13 @@ function testCacheBehaviour (config) {
 
   describe('with a shard stored', () => {
     beforeEach(async () => {
-      let shard = new Shard()
+      let shard = Shard.parse(null)
 
       await shard.link('/', 'path/')
       await shard.link('/path/', 'doc.txt')
       await shard.put('/path/doc.txt', () => ({ p: 1 }))
 
-      await adapter.write('x', shard.toString())
+      await adapter.write('x', await shard.serialize())
     })
 
     it('returns an existing shard', async () => {

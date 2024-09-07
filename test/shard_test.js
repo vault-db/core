@@ -6,8 +6,8 @@ const { assert } = require('chai')
 describe('Shard', () => {
   let shard
 
-  beforeEach(() => {
-    shard = new Shard()
+  beforeEach(async () => {
+    shard = Shard.parse(null)
   })
 
   it('returns null for a non-existent directory', async () => {
@@ -114,7 +114,7 @@ describe('Shard', () => {
     await shard.link('/', 'doc.txt')
     await shard.put('/doc.txt', () => ({ a: 1 }))
 
-    let copy = Shard.parse(shard.toString())
+    let copy = Shard.parse(await shard.serialize())
 
     assert.deepEqual(await copy.list('/'), ['doc.txt'])
     assert.deepEqual(await copy.get('/doc.txt'), { a: 1 })

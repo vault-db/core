@@ -161,13 +161,13 @@ function testExecutorBehaviour (config) {
 
   describe('with items in different shards', () => {
     beforeEach(async () => {
-      let shard = new Shard()
+      let shard = Shard.parse(null)
       await shard.link('/', 'doc')
-      await store.write('A', shard.toString())
+      await store.write('A', await shard.serialize())
 
-      shard = new Shard()
+      shard = Shard.parse(null)
       await shard.put('/doc', () => ({ x: 1 }))
-      await store.write('B', shard.toString())
+      await store.write('B', await shard.serialize())
     })
 
     function doUpdate () {
