@@ -1,18 +1,20 @@
 'use strict'
 
 const Cache = require('../lib/cache')
+const Cipher = require('../lib/cipher')
 const Executor = require('../lib/executor')
 const Shard = require('../lib/shard')
 
 const { assert } = require('chai')
 
 function testExecutorBehaviour (config) {
-  let store, executor, cache
+  let store, cipher, executor, cache
 
-  beforeEach(() => {
+  beforeEach(async () => {
     store = config.createAdapter()
-    executor = new Executor(new Cache(store))
-    cache = new Cache(store)
+    cipher = new Cipher({ key: await Cipher.generateKey() })
+    executor = new Executor(new Cache(store, cipher))
+    cache = new Cache(store, cipher)
   })
 
   afterEach(async () => {
@@ -161,17 +163,17 @@ function testExecutorBehaviour (config) {
 
   describe('with items in different shards', () => {
     beforeEach(async () => {
-      let shard = Shard.parse(null)
+      let shard = Shard.parse(null, cipher)
       await shard.link('/', 'doc')
       await store.write('A', await shard.serialize())
 
-      shard = Shard.parse(null)
+      shard = Shard.parse(null, cipher)
       await shard.put('/doc', () => ({ x: 1 }))
       await store.write('B', await shard.serialize())
     })
 
     function doUpdate () {
-      let exec = new Executor(new Cache(store))
+      let exec = new Executor(new Cache(store, cipher))
 
       let link = exec.add('A', [], (s) => s.link('/', 'doc'))
       let put = exec.add('B', [link.id], (s) => s.put('/doc', (doc) => ({ ...doc, y: 2 })))
@@ -181,7 +183,7 @@ function testExecutorBehaviour (config) {
     }
 
     function doRemove () {
-      let exec = new Executor(new Cache(store))
+      let exec = new Executor(new Cache(store, cipher))
 
       let rm = exec.add('B', [], (s) => s.rm('/doc'))
       let unlink = exec.add('A', [rm.id], (s) => s.unlink('/', 'doc'))
@@ -191,11 +193,11 @@ function testExecutorBehaviour (config) {
     }
 
     it('triggers a conflict between two clients', async () => {
-      let alice = new Executor(new Cache(store))
+      let alice = new Executor(new Cache(store, cipher))
       let op1 = alice.add('A', [], (s) => s.link('/', 'x'))
       alice.poll()
 
-      let bob = new Executor(new Cache(store))
+      let bob = new Executor(new Cache(store, cipher))
       let op2 = bob.add('A', [], (s) => s.link('/', 'y'))
       bob.poll()
 

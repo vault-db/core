@@ -1,16 +1,18 @@
 'use strict'
 
 const Cache = require('../lib/cache')
+const Cipher = require('../lib/cipher')
 const Shard = require('../lib/shard')
 
 const { assert } = require('chai')
 
 function testCacheBehaviour (config) {
-  let adapter, cache
+  let adapter, cipher, cache
 
-  beforeEach(() => {
+  beforeEach(async () => {
     adapter = config.createAdapter()
-    cache = new Cache(adapter)
+    cipher = new Cipher({ key: await Cipher.generateKey() })
+    cache = new Cache(adapter, cipher)
   })
 
   afterEach(async () => {
@@ -19,7 +21,7 @@ function testCacheBehaviour (config) {
 
   async function readFromStore (id) {
     let { value } = await adapter.read(id)
-    return Shard.parse(value)
+    return Shard.parse(value, cipher)
   }
 
   describe('with no stored shards', () => {
@@ -41,7 +43,7 @@ function testCacheBehaviour (config) {
 
   describe('with a shard stored', () => {
     beforeEach(async () => {
-      let shard = Shard.parse(null)
+      let shard = Shard.parse(null, cipher)
 
       await shard.link('/', 'path/')
       await shard.link('/path/', 'doc.txt')
@@ -100,7 +102,7 @@ function testCacheBehaviour (config) {
     })
 
     it('allows sequential updates from two clients', async () => {
-      let other = new Cache(adapter)
+      let other = new Cache(adapter, cipher)
 
       let copy = await other.read('x')
       await copy.put('/path/doc.txt', (doc) => ({ ...doc, q: 2 }))
@@ -120,7 +122,7 @@ function testCacheBehaviour (config) {
       beforeEach(async () => {
         await cache.read('x')
 
-        other = new Cache(adapter)
+        other = new Cache(adapter, cipher)
         let copy = await other.read('x')
         await copy.put('/path/doc.txt', (doc) => ({ ...doc, q: 2 }))
         await other.write('x')

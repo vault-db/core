@@ -1,16 +1,17 @@
 'use strict'
 
 const Cache = require('../lib/cache')
+const Cipher = require('../lib/cipher')
 const Router = require('../lib/router')
 const Task = require('../lib/task')
 
 const { assert } = require('chai')
 
 function testTaskBehaviour (config) {
-  let router, store, task, checker
+  let router, cipher, store, task, checker
 
   function newTask () {
-    return new Task(store, router)
+    return new Task(store, router, cipher)
   }
 
   async function find (path) {
@@ -23,6 +24,7 @@ function testTaskBehaviour (config) {
 
   beforeEach(async () => {
     router = new Router({ level: 2, key: await Router.generateKey() })
+    cipher = new Cipher({ key: await Cipher.generateKey() })
     store = config.createAdapter()
     task = newTask()
     checker = newTask()
@@ -297,7 +299,7 @@ function testTaskBehaviour (config) {
 
   describe('remove() after partial failure', () => {
     beforeEach(async () => {
-      let cache = new Cache(store)
+      let cache = new Cache(store, cipher)
 
       let id = await router.getShardId('/')
       let shard = await cache.read(id)

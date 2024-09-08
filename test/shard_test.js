@@ -1,13 +1,15 @@
 'use strict'
 
+const Cipher = require('../lib/cipher')
 const Shard = require('../lib/shard')
 const { assert } = require('chai')
 
 describe('Shard', () => {
-  let shard
+  let cipher, shard
 
   beforeEach(async () => {
-    shard = Shard.parse(null)
+    cipher = new Cipher({ key: await Cipher.generateKey() })
+    shard = Shard.parse(null, cipher)
   })
 
   it('returns null for a non-existent directory', async () => {
@@ -114,7 +116,7 @@ describe('Shard', () => {
     await shard.link('/', 'doc.txt')
     await shard.put('/doc.txt', () => ({ a: 1 }))
 
-    let copy = Shard.parse(await shard.serialize())
+    let copy = Shard.parse(await shard.serialize(), cipher)
 
     assert.deepEqual(await copy.list('/'), ['doc.txt'])
     assert.deepEqual(await copy.get('/doc.txt'), { a: 1 })
