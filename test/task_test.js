@@ -7,7 +7,7 @@ const Task = require('../lib/task')
 
 const { assert } = require('chai')
 
-function testTaskBehaviour (config) {
+function testTaskBehaviour (impl) {
   let router, cipher, store, task, checker
 
   function newTask () {
@@ -25,13 +25,13 @@ function testTaskBehaviour (config) {
   beforeEach(async () => {
     router = new Router({ level: 2, key: await Router.generateKey() })
     cipher = new Cipher({ key: await Cipher.generateKey() })
-    store = config.createAdapter()
+    store = impl.createAdapter()
     task = newTask()
     checker = newTask()
   })
 
   afterEach(async () => {
-    if (config.cleanup) await config.cleanup()
+    if (impl.cleanup) await impl.cleanup()
   })
 
   it('throws an error for getting an invalid path', async () => {

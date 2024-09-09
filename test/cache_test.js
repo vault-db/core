@@ -6,17 +6,17 @@ const Shard = require('../lib/shard')
 
 const { assert } = require('chai')
 
-function testCacheBehaviour (config) {
+function testCacheBehaviour (impl) {
   let adapter, cipher, cache
 
   beforeEach(async () => {
-    adapter = config.createAdapter()
+    adapter = impl.createAdapter()
     cipher = new Cipher({ key: await Cipher.generateKey() })
     cache = new Cache(adapter, cipher)
   })
 
   afterEach(async () => {
-    if (config.cleanup) await config.cleanup()
+    if (impl.cleanup) await impl.cleanup()
   })
 
   async function readFromStore (id) {

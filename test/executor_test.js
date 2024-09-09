@@ -7,18 +7,18 @@ const Shard = require('../lib/shard')
 
 const { assert } = require('chai')
 
-function testExecutorBehaviour (config) {
+function testExecutorBehaviour (impl) {
   let store, cipher, executor, cache
 
   beforeEach(async () => {
-    store = config.createAdapter()
+    store = impl.createAdapter()
     cipher = new Cipher({ key: await Cipher.generateKey() })
     executor = new Executor(new Cache(store, cipher))
     cache = new Cache(store, cipher)
   })
 
   afterEach(async () => {
-    if (config.cleanup) await config.cleanup()
+    if (impl.cleanup) await impl.cleanup()
   })
 
   it('executes a single change to a shard', async () => {

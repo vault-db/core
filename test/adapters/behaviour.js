@@ -2,15 +2,15 @@
 
 const { assert } = require('chai')
 
-function testAdapterBehaviour (config) {
+function testAdapterBehaviour (impl) {
   let adapter
 
   beforeEach(() => {
-    adapter = config.createAdapter()
+    adapter = impl.createAdapter()
   })
 
   afterEach(async () => {
-    if (config.cleanup) await config.cleanup()
+    if (impl.cleanup) await impl.cleanup()
   })
 
   it('returns null for an unknown key', async () => {
