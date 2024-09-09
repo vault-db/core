@@ -8,10 +8,10 @@ const Task = require('../lib/task')
 const { assert } = require('chai')
 
 function testTaskBehaviour (impl) {
-  let router, cipher, store, task, checker
+  let router, cipher, adapter, task, checker
 
   function newTask () {
-    return new Task(store, router, cipher)
+    return new Task(adapter, router, cipher)
   }
 
   async function find (path) {
@@ -25,7 +25,7 @@ function testTaskBehaviour (impl) {
   beforeEach(async () => {
     router = new Router({ level: 2, key: await Router.generateKey() })
     cipher = new Cipher({ key: await Cipher.generateKey() })
-    store = impl.createAdapter()
+    adapter = impl.createAdapter()
     task = newTask()
     checker = newTask()
   })
@@ -71,7 +71,7 @@ function testTaskBehaviour (impl) {
     })
 
     it('exposes an error when writing a shard', async () => {
-      store.write = () => Promise.reject(new Error('oh no'))
+      adapter.write = () => Promise.reject(new Error('oh no'))
 
       let error = await task.update('/doc', () => ({ a: 1 })).catch(e => e)
       assert.equal(error.message, 'oh no')
@@ -299,7 +299,7 @@ function testTaskBehaviour (impl) {
 
   describe('remove() after partial failure', () => {
     beforeEach(async () => {
-      let cache = new Cache(store, cipher)
+      let cache = new Cache(adapter, cipher)
 
       let id = await router.getShardId('/')
       let shard = await cache.read(id)
