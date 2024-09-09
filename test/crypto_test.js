@@ -20,7 +20,7 @@ function testCrypto (impl) {
   describe('HMAC-SHA-256', () => {
     it('generates keys', async () => {
       let key = await impl.hmacSha256.generateKey()
-      assert(key instanceof Buffer)
+      assert.instanceOf(key, Buffer)
       assert.equal(key.length, 64)
     })
 
@@ -38,13 +38,13 @@ function testCrypto (impl) {
   describe('AES-256-GCM', () => {
     it('generates a key', async () => {
       let key = await impl.aes256gcm.generateKey()
-      assert(key instanceof Buffer)
+      assert.instanceOf(key, Buffer)
       assert.equal(key.length, 32)
     })
 
     it('generates an IV', async () => {
       let iv = await impl.aes256gcm.generateIv()
-      assert(iv instanceof Buffer)
+      assert.instanceOf(iv, Buffer)
       assert.equal(iv.length, 16)
     })
 

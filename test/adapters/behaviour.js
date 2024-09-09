@@ -82,7 +82,7 @@ function testAdapterBehaviour (impl) {
 
     let [passed, failed] = w1.rev ? [w1, w2] : [w2, w1]
 
-    assert.notEqual(passed.rev, undefined)
+    assert.isDefined(passed.rev)
     assert.strictEqual(failed.code, 'ERR_CONFLICT')
 
     let result = await adapter.read('x')
