@@ -6,8 +6,9 @@ const Executor = require('../lib/executor')
 const Shard = require('../lib/shard')
 
 const { assert } = require('chai')
+const { testWithAdapters } = require('./adapters/utils')
 
-function testExecutorBehaviour (impl) {
+testWithAdapters('Executor', (impl) => {
   let store, cipher, executor, cache
 
   beforeEach(async () => {
@@ -17,9 +18,7 @@ function testExecutorBehaviour (impl) {
     cache = new Cache(store, cipher)
   })
 
-  afterEach(async () => {
-    if (impl.cleanup) await impl.cleanup()
-  })
+  afterEach(impl.cleanup)
 
   it('executes a single change to a shard', async () => {
     let link = executor.add('A', [], (s) => s.link('/', 'doc.txt'))
@@ -225,34 +224,5 @@ function testExecutorBehaviour (impl) {
 
       assert.isTrue(doc === null || dir.includes('doc'))
     })
-  })
-}
-
-describe('Executor (Memory)', () => {
-  const MemoryAdapter = require('../lib/adapters/memory')
-
-  testExecutorBehaviour({
-    createAdapter () {
-      return new MemoryAdapter()
-    }
-  })
-})
-
-describe('Executor (File)', () => {
-  const fs = require('fs').promises
-  const path = require('path')
-  const FileAdapter = require('../lib/adapters/file')
-
-  const STORE_PATH = path.resolve(__dirname, '..', 'tmp', 'executor-file')
-
-  testExecutorBehaviour({
-    createAdapter () {
-      return new FileAdapter(STORE_PATH)
-    },
-
-    async cleanup () {
-      let fn = fs.rm ? 'rm' : 'rmdir'
-      await fs[fn](STORE_PATH, { recursive: true }).catch(e => e)
-    }
   })
 })

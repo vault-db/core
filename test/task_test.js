@@ -6,8 +6,9 @@ const Router = require('../lib/router')
 const Task = require('../lib/task')
 
 const { assert } = require('chai')
+const { testWithAdapters } = require('./adapters/utils')
 
-function testTaskBehaviour (impl) {
+testWithAdapters('Task', (impl) => {
   let router, cipher, adapter, task, checker
 
   function newTask () {
@@ -30,9 +31,7 @@ function testTaskBehaviour (impl) {
     checker = newTask()
   })
 
-  afterEach(async () => {
-    if (impl.cleanup) await impl.cleanup()
-  })
+  afterEach(impl.cleanup)
 
   it('throws an error for getting an invalid path', async () => {
     let error = await task.get('x').catch(e => e)
@@ -355,34 +354,5 @@ function testTaskBehaviour (impl) {
       let error = await task.prune('/path').catch(e => e)
       assert.equal(error.code, 'ERR_INVALID_PATH')
     })
-  })
-}
-
-describe('Task (Memory)', () => {
-  const MemoryAdapter = require('../lib/adapters/memory')
-
-  testTaskBehaviour({
-    createAdapter () {
-      return new MemoryAdapter()
-    }
-  })
-})
-
-describe('Task (File)', () => {
-  const fs = require('fs').promises
-  const path = require('path')
-  const FileAdapter = require('../lib/adapters/file')
-
-  const STORE_PATH = path.resolve(__dirname, '..', 'tmp', 'task-file')
-
-  testTaskBehaviour({
-    createAdapter () {
-      return new FileAdapter(STORE_PATH)
-    },
-
-    async cleanup () {
-      let fn = fs.rm ? 'rm' : 'rmdir'
-      await fs[fn](STORE_PATH, { recursive: true }).catch(e => e)
-    }
   })
 })

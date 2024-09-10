@@ -5,8 +5,9 @@ const Cipher = require('../lib/cipher')
 const Shard = require('../lib/shard')
 
 const { assert } = require('chai')
+const { testWithAdapters } = require('./adapters/utils')
 
-function testCacheBehaviour (impl) {
+testWithAdapters('Cache', (impl) => {
   let adapter, cipher, cache
 
   beforeEach(async () => {
@@ -15,9 +16,7 @@ function testCacheBehaviour (impl) {
     cache = new Cache(adapter, cipher)
   })
 
-  afterEach(async () => {
-    if (impl.cleanup) await impl.cleanup()
-  })
+  afterEach(impl.cleanup)
 
   async function readFromStore (id) {
     let { value } = await adapter.read(id)
@@ -166,34 +165,5 @@ function testCacheBehaviour (impl) {
         assert.deepEqual(await shard.get('/path/doc.txt'), { p: 1 })
       })
     })
-  })
-}
-
-describe('Cache (Memory)', () => {
-  const MemoryAdapter = require('../lib/adapters/memory')
-
-  testCacheBehaviour({
-    createAdapter () {
-      return new MemoryAdapter()
-    }
-  })
-})
-
-describe('Cache (File)', () => {
-  const fs = require('fs').promises
-  const path = require('path')
-  const FileAdapter = require('../lib/adapters/file')
-
-  const STORE_PATH = path.resolve(__dirname, '..', 'tmp', 'cache-file')
-
-  testCacheBehaviour({
-    createAdapter () {
-      return new FileAdapter(STORE_PATH)
-    },
-
-    async cleanup () {
-      let fn = fs.rm ? 'rm' : 'rmdir'
-      await fs[fn](STORE_PATH, { recursive: true }).catch(e => e)
-    }
   })
 })

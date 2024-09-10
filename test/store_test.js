@@ -3,8 +3,9 @@
 const Store = require('../lib/store')
 
 const { assert } = require('chai')
+const { testWithAdapters } = require('./adapters/utils')
 
-function testStoreBehaviour (impl) {
+testWithAdapters('Store', (impl) => {
   let adapter, store, checker
 
   beforeEach(async () => {
@@ -13,9 +14,7 @@ function testStoreBehaviour (impl) {
     checker = await Store.open(adapter)
   })
 
-  afterEach(async () => {
-    if (impl.cleanup) await impl.cleanup()
-  })
+  afterEach(impl.cleanup)
 
   it('updates several items', async () => {
     await Promise.all([
@@ -41,34 +40,5 @@ function testStoreBehaviour (impl) {
 
     let doc = await checker.get('/doc')
     assert.deepEqual(doc, { a: 1, b: 2, c: 3 })
-  })
-}
-
-describe('Store (Memory)', () => {
-  const MemoryAdapter = require('../lib/adapters/memory')
-
-  testStoreBehaviour({
-    createAdapter () {
-      return new MemoryAdapter()
-    }
-  })
-})
-
-describe('Store (File)', () => {
-  const fs = require('fs').promises
-  const path = require('path')
-  const FileAdapter = require('../lib/adapters/file')
-
-  const STORE_PATH = path.resolve(__dirname, '..', 'tmp', 'store-file')
-
-  testStoreBehaviour({
-    createAdapter () {
-      return new FileAdapter(STORE_PATH)
-    },
-
-    async cleanup () {
-      let fn = fs.rm ? 'rm' : 'rmdir'
-      await fs[fn](STORE_PATH, { recursive: true }).catch(e => e)
-    }
   })
 })
