@@ -16,7 +16,7 @@ testWithAdapters('Config', (impl) => {
   afterEach(impl.cleanup)
 
   it('writes initial config to the storage', async () => {
-    await Config.open(adapter, { password })
+    await Config.create(adapter, { password })
 
     let { value } = await adapter.read('config')
     let config = JSON.parse(value)
@@ -33,7 +33,7 @@ testWithAdapters('Config', (impl) => {
   })
 
   it('lets the sharding level be set', async () => {
-    await Config.open(adapter, { password, sharding: 3 })
+    await Config.create(adapter, { password, sharding: 3 })
 
     let { value } = await adapter.read('config')
     let config = JSON.parse(value)
@@ -42,7 +42,7 @@ testWithAdapters('Config', (impl) => {
   })
 
   it('lets the sharding level be set to zero', async () => {
-    await Config.open(adapter, { password, sharding: 0 })
+    await Config.create(adapter, { password, sharding: 0 })
 
     let { value } = await adapter.read('config')
     let config = JSON.parse(value)
@@ -50,11 +50,29 @@ testWithAdapters('Config', (impl) => {
     assert.equal(config.sharding.level, 0)
   })
 
+  async function open (...args) {
+    try {
+      return await Config.open(...args)
+    } catch (error) {
+      if (error.code !== 'ERR_MISSING') throw error
+
+      try {
+        return await Config.create(...args)
+      } catch (error) {
+        if (error.code === 'ERR_EXIST') {
+          return open(...args)
+        } else {
+          throw error
+        }
+      }
+    }
+  }
+
   it('makes concurrently created clients agree on the config', async () => {
     let configs = []
 
     for (let i = 0; i < 10; i++) {
-      configs.push(Config.open(adapter, { password }))
+      configs.push(open(adapter, { password }))
     }
     configs = await Promise.all(configs)
 

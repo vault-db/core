@@ -11,45 +11,79 @@ testWithAdapters('Store', (impl) => {
 
   beforeEach(async () => {
     adapter = impl.createAdapter()
-    store = await Store.open(adapter, { password })
-    checker = await Store.open(adapter, { password })
   })
 
   afterEach(impl.cleanup)
 
-  it('updates several items', async () => {
-    await Promise.all([
-      store.update('/a', () => ({ a: 1 })),
-      store.update('/path/b', () => ({ b: 2 })),
-      store.update('/path/to/c', () => ({ c: 3 }))
-    ])
+  describe('with no existing data store', () => {
+    it('fails to open the store', async () => {
+      let error = await Store.open(adapter).catch(e => e)
+      assert.equal(error.code, 'ERR_MISSING')
+    })
 
-    let docs = []
+    it('fails to create a store with no password', async () => {
+      let error = await Store.create(adapter).catch(e => e)
+      assert.equal(error.code, 'ERR_CONFIG')
 
-    for await (let doc of checker.find('/')) {
-      docs.push(doc)
-    }
-    assert.deepEqual(docs, ['/a', '/path/b', '/path/to/c'])
+      error = await Store.create(adapter, {}).catch(e => e)
+      assert.equal(error.code, 'ERR_CONFIG')
+    })
+
+    it('opens the store and lets items by written to it', async () => {
+      let store = await Store.create(adapter, { password })
+      await store.update('/doc', () => ({ x: 42 }))
+
+      let checker = await Store.open(adapter, { password })
+      let doc = await checker.get('/doc')
+      assert.deepEqual(doc, { x: 42 })
+    })
   })
 
-  it('updates the same doc multiple times', async () => {
-    await Promise.all([
-      store.update('/doc', (doc) => ({ ...doc, a: 1 })),
-      store.update('/doc', (doc) => ({ ...doc, b: 2 })),
-      store.update('/doc', (doc) => ({ ...doc, c: 3 }))
-    ])
+  describe('with an existing data store', () => {
+    beforeEach(async () => {
+      store = await Store.create(adapter, { password })
+      checker = await Store.open(adapter, { password })
+    })
 
-    let doc = await checker.get('/doc')
-    assert.deepEqual(doc, { a: 1, b: 2, c: 3 })
-  })
+    it('does not allow the store to be re-created', async () => {
+      let error = await Store.create(adapter, { password }).catch(e => e)
+      assert.equal(error.code, 'ERR_EXIST')
+    })
 
-  it('fails to open with the incorrect password', async () => {
-    let error = await Store.open(adapter, { password: 'wrong' }).catch(e => e)
-    assert.equal(error.code, 'ERR_ACCESS')
-  })
+    it('updates several items', async () => {
+      await Promise.all([
+        store.update('/a', () => ({ a: 1 })),
+        store.update('/path/b', () => ({ b: 2 })),
+        store.update('/path/to/c', () => ({ c: 3 }))
+      ])
 
-  it('fails to open with no password', async () => {
-    let error = await Store.open(adapter).catch(e => e)
-    assert.equal(error.code, 'ERR_ACCESS')
+      let docs = []
+
+      for await (let doc of checker.find('/')) {
+        docs.push(doc)
+      }
+      assert.deepEqual(docs, ['/a', '/path/b', '/path/to/c'])
+    })
+
+    it('updates the same doc multiple times', async () => {
+      await Promise.all([
+        store.update('/doc', (doc) => ({ ...doc, a: 1 })),
+        store.update('/doc', (doc) => ({ ...doc, b: 2 })),
+        store.update('/doc', (doc) => ({ ...doc, c: 3 }))
+      ])
+
+      let doc = await checker.get('/doc')
+      assert.deepEqual(doc, { a: 1, b: 2, c: 3 })
+    })
+
+    it('fails to open with the incorrect password', async () => {
+      let error = await Store.open(adapter, { password: 'wrong' }).catch(e => e)
+      assert.equal(error.code, 'ERR_ACCESS')
+    })
+
+    it('fails to open with no password', async () => {
+      let error = await Store.open(adapter).catch(e => e)
+      assert.equal(error.code, 'ERR_ACCESS')
+    })
   })
 })
