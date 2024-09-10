@@ -7,11 +7,12 @@ const { testWithAdapters } = require('./adapters/utils')
 
 testWithAdapters('Store', (impl) => {
   let adapter, store, checker
+  let password = 'the password'
 
   beforeEach(async () => {
     adapter = impl.createAdapter()
-    store = await Store.open(adapter)
-    checker = await Store.open(adapter)
+    store = await Store.open(adapter, { password })
+    checker = await Store.open(adapter, { password })
   })
 
   afterEach(impl.cleanup)
@@ -40,5 +41,15 @@ testWithAdapters('Store', (impl) => {
 
     let doc = await checker.get('/doc')
     assert.deepEqual(doc, { a: 1, b: 2, c: 3 })
+  })
+
+  it('fails to open with the incorrect password', async () => {
+    let error = await Store.open(adapter, { password: 'wrong' }).catch(e => e)
+    assert.equal(error.code, 'ERR_ACCESS')
+  })
+
+  it('fails to open with no password', async () => {
+    let error = await Store.open(adapter).catch(e => e)
+    assert.equal(error.code, 'ERR_ACCESS')
   })
 })

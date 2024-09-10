@@ -7,6 +7,7 @@ const { testWithAdapters } = require('./adapters/utils')
 
 testWithAdapters('Config', (impl) => {
   let adapter, config
+  let password = 'hello'
 
   beforeEach(() => {
     adapter = impl.createAdapter()
@@ -15,12 +16,15 @@ testWithAdapters('Config', (impl) => {
   afterEach(impl.cleanup)
 
   it('writes initial config to the storage', async () => {
-    await Config.open(adapter)
+    await Config.open(adapter, { password })
 
     let { value } = await adapter.read('config')
     let config = JSON.parse(value)
 
     assert.equal(config.version, 1)
+
+    assert.match(config.password.salt, /^[a-z0-9/+]+=*$/i)
+    assert.typeOf(config.password.iter, 'number')
 
     assert.match(config.cipher.key, /^[a-z0-9/+]+=*$/i)
 
@@ -29,7 +33,7 @@ testWithAdapters('Config', (impl) => {
   })
 
   it('lets the sharding level be set', async () => {
-    await Config.open(adapter, { sharding: 3 })
+    await Config.open(adapter, { password, sharding: 3 })
 
     let { value } = await adapter.read('config')
     let config = JSON.parse(value)
@@ -38,7 +42,7 @@ testWithAdapters('Config', (impl) => {
   })
 
   it('lets the sharding level be set to zero', async () => {
-    await Config.open(adapter, { sharding: 0 })
+    await Config.open(adapter, { password, sharding: 0 })
 
     let { value } = await adapter.read('config')
     let config = JSON.parse(value)
@@ -50,7 +54,7 @@ testWithAdapters('Config', (impl) => {
     let configs = []
 
     for (let i = 0; i < 10; i++) {
-      configs.push(Config.open(adapter))
+      configs.push(Config.open(adapter, { password }))
     }
     configs = await Promise.all(configs)
 
