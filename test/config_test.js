@@ -16,7 +16,7 @@ testWithAdapters('Config', (impl) => {
   afterEach(impl.cleanup)
 
   it('writes initial config to the storage', async () => {
-    await Config.create(adapter, { password })
+    await Config.create(adapter, { key: { password } })
 
     let { value } = await adapter.read('config')
     let config = JSON.parse(value)
@@ -33,7 +33,7 @@ testWithAdapters('Config', (impl) => {
   })
 
   it('lets the sharding level be set', async () => {
-    await Config.create(adapter, { password, sharding: 3 })
+    await Config.create(adapter, { key: { password }, sharding: { level: 3 } })
 
     let { value } = await adapter.read('config')
     let config = JSON.parse(value)
@@ -42,7 +42,7 @@ testWithAdapters('Config', (impl) => {
   })
 
   it('lets the sharding level be set to zero', async () => {
-    await Config.create(adapter, { password, sharding: 0 })
+    await Config.create(adapter, { key: { password }, sharding: { level: 0 } })
 
     let { value } = await adapter.read('config')
     let config = JSON.parse(value)
@@ -72,7 +72,7 @@ testWithAdapters('Config', (impl) => {
     let configs = []
 
     for (let i = 0; i < 10; i++) {
-      configs.push(open(adapter, { password }))
+      configs.push(open(adapter, { key: { password } }))
     }
     configs = await Promise.all(configs)
 

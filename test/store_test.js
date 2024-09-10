@@ -25,15 +25,15 @@ testWithAdapters('Store', (impl) => {
       let error = await Store.create(adapter).catch(e => e)
       assert.equal(error.code, 'ERR_CONFIG')
 
-      error = await Store.create(adapter, {}).catch(e => e)
+      error = await Store.create(adapter, { key: {} }).catch(e => e)
       assert.equal(error.code, 'ERR_CONFIG')
     })
 
     it('opens the store and lets items by written to it', async () => {
-      let store = await Store.create(adapter, { password })
+      let store = await Store.create(adapter, { key: { password } })
       await store.update('/doc', () => ({ x: 42 }))
 
-      let checker = await Store.open(adapter, { password })
+      let checker = await Store.open(adapter, { key: { password } })
       let doc = await checker.get('/doc')
       assert.deepEqual(doc, { x: 42 })
     })
@@ -41,12 +41,12 @@ testWithAdapters('Store', (impl) => {
 
   describe('with an existing data store', () => {
     beforeEach(async () => {
-      store = await Store.create(adapter, { password })
-      checker = await Store.open(adapter, { password })
+      store = await Store.create(adapter, { key: { password } })
+      checker = await Store.open(adapter, { key: { password } })
     })
 
     it('does not allow the store to be re-created', async () => {
-      let error = await Store.create(adapter, { password }).catch(e => e)
+      let error = await Store.create(adapter, { key: { password } }).catch(e => e)
       assert.equal(error.code, 'ERR_EXIST')
     })
 
@@ -77,7 +77,7 @@ testWithAdapters('Store', (impl) => {
     })
 
     it('fails to open with the incorrect password', async () => {
-      let error = await Store.open(adapter, { password: 'wrong' }).catch(e => e)
+      let error = await Store.open(adapter, { key: { password: 'wrong' } }).catch(e => e)
       assert.equal(error.code, 'ERR_ACCESS')
     })
 
