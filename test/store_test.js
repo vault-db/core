@@ -8,6 +8,7 @@ const { testWithAdapters } = require('./adapters/utils')
 testWithAdapters('Store', (impl) => {
   let adapter, store, checker
   let password = 'the password'
+  let createKey = { password, iterations: 10 }
 
   beforeEach(async () => {
     adapter = impl.createAdapter()
@@ -30,7 +31,7 @@ testWithAdapters('Store', (impl) => {
     })
 
     it('opens the store and lets items by written to it', async () => {
-      let store = await Store.create(adapter, { key: { password } })
+      let store = await Store.create(adapter, { key: createKey })
       await store.update('/doc', () => ({ x: 42 }))
 
       let checker = await Store.open(adapter, { key: { password } })
@@ -41,12 +42,12 @@ testWithAdapters('Store', (impl) => {
 
   describe('with an existing data store', () => {
     beforeEach(async () => {
-      store = await Store.create(adapter, { key: { password } })
+      store = await Store.create(adapter, { key: createKey })
       checker = await Store.open(adapter, { key: { password } })
     })
 
     it('does not allow the store to be re-created', async () => {
-      let error = await Store.create(adapter, { key: { password } }).catch(e => e)
+      let error = await Store.create(adapter, { key: createKey }).catch(e => e)
       assert.equal(error.code, 'ERR_EXIST')
     })
 
