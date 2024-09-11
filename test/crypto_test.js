@@ -4,6 +4,7 @@ const NodeCrypto = require('../lib/crypto/node_crypto')
 const WebCrypto = require('../lib/crypto/web_crypto')
 
 const { assert } = require('chai')
+const { Buffer } = require('buffer')
 
 function testCrypto (impl) {
   describe('SHA-256', () => {

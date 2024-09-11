@@ -1,7 +1,9 @@
 'use strict'
 
 const Router = require('../lib/router')
+
 const { assert } = require('chai')
+const { Buffer } = require('buffer')
 
 describe('Router', () => {
   it('returns shard IDs at level 0', async () => {
