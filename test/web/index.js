@@ -1,0 +1,17 @@
+mocha.setup('bdd')
+mocha.checkLeaks()
+
+require('../adapters/memory_test')
+require('../cache_test')
+require('../cipher_test')
+require('../config_test')
+require('../crypto_test')
+require('../executor_test')
+require('../path_test')
+require('../router_test')
+require('../schedule_test')
+require('../shard_test')
+require('../store_test')
+require('../task_test')
+
+mocha.run()
