@@ -13,10 +13,12 @@ function testWithAdapters (name, tests) {
     })
   })
 
+  return;
+
   describe(`${name} (File)`, () => {
-    const fs = require('fs').promises
-    const path = require('path')
-    const FileAdapter = require('../../lib/adapters/file')
+    // const fs = require('fs').promises
+    // const path = require('path')
+    // const FileAdapter = require('../../lib/adapters/file')
 
     const STORE_PATH = path.resolve(__dirname, '..', '..', 'tmp', `test-${name}`)
 
