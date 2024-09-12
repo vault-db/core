@@ -1,20 +1,18 @@
 'use strict'
 
 const Cache = require('../lib/cache')
-const FileAdapter = require('../lib/adapters/file')
-const MemoryAdapter = require('../lib/adapters/memory')
+const Cipher = require('../lib/cipher')
 const Router = require('../lib/router')
 const Task = require('../lib/task')
 
 const { assert } = require('chai')
-const fs = require('fs').promises
-const path = require('path')
+const { testWithAdapters } = require('./adapters/utils')
 
-function testTaskBehaviour (config) {
-  let router, store, task, checker
+testWithAdapters('Task', (impl) => {
+  let router, cipher, adapter, task, checker
 
   function newTask () {
-    return new Task(store, router)
+    return new Task(adapter, router, cipher)
   }
 
   async function find (path) {
@@ -27,14 +25,13 @@ function testTaskBehaviour (config) {
 
   beforeEach(async () => {
     router = new Router({ level: 2, key: await Router.generateKey() })
-    store = config.createAdapter()
+    cipher = new Cipher({ key: await Cipher.generateKey() })
+    adapter = impl.createAdapter()
     task = newTask()
     checker = newTask()
   })
 
-  afterEach(async () => {
-    if (config.cleanup) await config.cleanup()
-  })
+  afterEach(impl.cleanup)
 
   it('throws an error for getting an invalid path', async () => {
     let error = await task.get('x').catch(e => e)
@@ -73,7 +70,7 @@ function testTaskBehaviour (config) {
     })
 
     it('exposes an error when writing a shard', async () => {
-      store.write = () => Promise.reject(new Error('oh no'))
+      adapter.write = () => Promise.reject(new Error('oh no'))
 
       let error = await task.update('/doc', () => ({ a: 1 })).catch(e => e)
       assert.equal(error.message, 'oh no')
@@ -301,7 +298,7 @@ function testTaskBehaviour (config) {
 
   describe('remove() after partial failure', () => {
     beforeEach(async () => {
-      let cache = new Cache(store)
+      let cache = new Cache(adapter, cipher)
 
       let id = await router.getShardId('/')
       let shard = await cache.read(id)
@@ -357,28 +354,5 @@ function testTaskBehaviour (config) {
       let error = await task.prune('/path').catch(e => e)
       assert.equal(error.code, 'ERR_INVALID_PATH')
     })
-  })
-}
-
-describe('Task (Memory)', () => {
-  testTaskBehaviour({
-    createAdapter () {
-      return new MemoryAdapter()
-    }
-  })
-})
-
-const STORE_PATH = path.resolve(__dirname, '..', 'tmp', 'task-file')
-
-describe('Task (File)', () => {
-  testTaskBehaviour({
-    createAdapter () {
-      return new FileAdapter(STORE_PATH)
-    },
-
-    async cleanup () {
-      let fn = fs.rm ? 'rm' : 'rmdir'
-      await fs[fn](STORE_PATH, { recursive: true }).catch(e => e)
-    }
   })
 })

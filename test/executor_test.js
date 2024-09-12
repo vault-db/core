@@ -1,20 +1,24 @@
 'use strict'
 
 const Cache = require('../lib/cache')
+const Cipher = require('../lib/cipher')
 const Executor = require('../lib/executor')
-const MemoryAdapter = require('../lib/adapters/memory')
 const Shard = require('../lib/shard')
 
 const { assert } = require('chai')
+const { testWithAdapters } = require('./adapters/utils')
 
-describe('Executor', () => {
-  let store, executor, cache
+testWithAdapters('Executor', (impl) => {
+  let store, cipher, executor, cache
 
-  beforeEach(() => {
-    store = new MemoryAdapter()
-    executor = new Executor(new Cache(store))
-    cache = new Cache(store)
+  beforeEach(async () => {
+    store = impl.createAdapter()
+    cipher = new Cipher({ key: await Cipher.generateKey() })
+    executor = new Executor(new Cache(store, cipher))
+    cache = new Cache(store, cipher)
   })
+
+  afterEach(impl.cleanup)
 
   it('executes a single change to a shard', async () => {
     let link = executor.add('A', [], (s) => s.link('/', 'doc.txt'))
@@ -158,17 +162,17 @@ describe('Executor', () => {
 
   describe('with items in different shards', () => {
     beforeEach(async () => {
-      let shard = new Shard()
+      let shard = Shard.parse(null, cipher)
       await shard.link('/', 'doc')
-      await store.write('A', shard.toString())
+      await store.write('A', await shard.serialize())
 
-      shard = new Shard()
+      shard = Shard.parse(null, cipher)
       await shard.put('/doc', () => ({ x: 1 }))
-      await store.write('B', shard.toString())
+      await store.write('B', await shard.serialize())
     })
 
     function doUpdate () {
-      let exec = new Executor(new Cache(store))
+      let exec = new Executor(new Cache(store, cipher))
 
       let link = exec.add('A', [], (s) => s.link('/', 'doc'))
       let put = exec.add('B', [link.id], (s) => s.put('/doc', (doc) => ({ ...doc, y: 2 })))
@@ -178,7 +182,7 @@ describe('Executor', () => {
     }
 
     function doRemove () {
-      let exec = new Executor(new Cache(store))
+      let exec = new Executor(new Cache(store, cipher))
 
       let rm = exec.add('B', [], (s) => s.rm('/doc'))
       let unlink = exec.add('A', [rm.id], (s) => s.unlink('/', 'doc'))
@@ -188,21 +192,27 @@ describe('Executor', () => {
     }
 
     it('triggers a conflict between two clients', async () => {
-      let alice = new Executor(new Cache(store))
+      let alice = new Executor(new Cache(store, cipher))
       let op1 = alice.add('A', [], (s) => s.link('/', 'x'))
       alice.poll()
 
-      let bob = new Executor(new Cache(store))
+      let bob = new Executor(new Cache(store, cipher))
       let op2 = bob.add('A', [], (s) => s.link('/', 'y'))
       bob.poll()
 
-      await op1.promise
+      let [e1, e2] = await Promise.all([
+        op1.promise.catch(e => e),
+        op2.promise.catch(e => e)
+      ])
 
-      let error = await op2.promise.catch(e => e)
+      let [none, error] = e1 ? [e2, e1] : [e1, e2]
+
+      assert.isUndefined(none)
       assert.equal(error.code, 'ERR_CONFLICT')
 
       let dir = await cache.read('A').then((s) => s.list('/'))
-      assert.deepEqual(dir, ['doc', 'x'])
+      let item = (e1 === error) ? 'y' : 'x'
+      assert.deepEqual(dir, ['doc', item])
     })
 
     it('loads all shards before writing to prevent race conditions', async () => {

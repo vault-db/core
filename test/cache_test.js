@@ -1,29 +1,33 @@
 'use strict'
 
 const Cache = require('../lib/cache')
-const MemoryAdapter = require('../lib/adapters/memory')
+const Cipher = require('../lib/cipher')
 const Shard = require('../lib/shard')
 
 const { assert } = require('chai')
+const { testWithAdapters } = require('./adapters/utils')
 
-describe('Cache', () => {
-  let adapter, cache
+testWithAdapters('Cache', (impl) => {
+  let adapter, cipher, cache
 
-  beforeEach(() => {
-    adapter = new MemoryAdapter()
-    cache = new Cache(adapter)
+  beforeEach(async () => {
+    adapter = impl.createAdapter()
+    cipher = new Cipher({ key: await Cipher.generateKey() })
+    cache = new Cache(adapter, cipher)
   })
+
+  afterEach(impl.cleanup)
 
   async function readFromStore (id) {
     let { value } = await adapter.read(id)
-    return Shard.parse(value)
+    return Shard.parse(value, cipher)
   }
 
   describe('with no stored shards', () => {
     it('returns an new empty shard', async () => {
       let shard = await cache.read('x')
       assert.instanceOf(shard, Shard)
-      assert.equal(shard.size(), 0)
+      assert.equal(await shard.size(), 0)
     })
 
     it('writes a new shard to the adapter', async () => {
@@ -38,13 +42,13 @@ describe('Cache', () => {
 
   describe('with a shard stored', () => {
     beforeEach(async () => {
-      let shard = new Shard()
+      let shard = Shard.parse(null, cipher)
 
       await shard.link('/', 'path/')
       await shard.link('/path/', 'doc.txt')
       await shard.put('/path/doc.txt', () => ({ p: 1 }))
 
-      await adapter.write('x', shard.toString())
+      await adapter.write('x', await shard.serialize())
     })
 
     it('returns an existing shard', async () => {
@@ -97,7 +101,7 @@ describe('Cache', () => {
     })
 
     it('allows sequential updates from two clients', async () => {
-      let other = new Cache(adapter)
+      let other = new Cache(adapter, cipher)
 
       let copy = await other.read('x')
       await copy.put('/path/doc.txt', (doc) => ({ ...doc, q: 2 }))
@@ -117,7 +121,7 @@ describe('Cache', () => {
       beforeEach(async () => {
         await cache.read('x')
 
-        other = new Cache(adapter)
+        other = new Cache(adapter, cipher)
         let copy = await other.read('x')
         await copy.put('/path/doc.txt', (doc) => ({ ...doc, q: 2 }))
         await other.write('x')

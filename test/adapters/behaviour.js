@@ -2,15 +2,15 @@
 
 const { assert } = require('chai')
 
-function testAdapterBehaviour (config) {
+function testAdapterBehaviour (impl) {
   let adapter
 
   beforeEach(() => {
-    adapter = config.createAdapter()
+    adapter = impl.createAdapter()
   })
 
   afterEach(async () => {
-    if (config.cleanup) await config.cleanup()
+    if (impl.cleanup) await impl.cleanup()
   })
 
   it('returns null for an unknown key', async () => {
@@ -82,7 +82,7 @@ function testAdapterBehaviour (config) {
 
     let [passed, failed] = w1.rev ? [w1, w2] : [w2, w1]
 
-    assert.notEqual(passed.rev, undefined)
+    assert.isDefined(passed.rev)
     assert.strictEqual(failed.code, 'ERR_CONFLICT')
 
     let result = await adapter.read('x')
