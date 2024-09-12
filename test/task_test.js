@@ -24,7 +24,7 @@ testWithAdapters('Task', (impl) => {
   }
 
   beforeEach(async () => {
-    router = new Router({ level: 2, key: await Router.generateKey() })
+    router = new Router({ n: 2, key: await Router.generateKey() })
     cipher = new Cipher({ key: await Cipher.generateKey() })
     adapter = impl.createAdapter()
     task = newTask()

@@ -29,8 +29,8 @@ testWithAdapters('Config', (impl) => {
 
     assert.match(config.cipher.key, /^[a-z0-9/+]+=*$/i)
 
-    assert.match(config.sharding.key, /^[a-z0-9/+]+=*$/i)
-    assert.equal(config.sharding.level, 2)
+    assert.match(config.shards.key, /^[a-z0-9/+]+=*$/i)
+    assert.equal(config.shards.n, 2)
   })
 
   it('sets the key iterations', async () => {
@@ -42,22 +42,20 @@ testWithAdapters('Config', (impl) => {
     assert.equal(config.password.iterations, 50)
   })
 
-  it('sets the sharding level', async () => {
-    await Config.create(adapter, { key: createKey, sharding: { level: 3 } })
+  it('sets the number of shards', async () => {
+    await Config.create(adapter, { key: createKey, shards: { n: 3 } })
 
     let { value } = await adapter.read('config')
     let config = JSON.parse(value)
 
-    assert.equal(config.sharding.level, 3)
+    assert.equal(config.shards.n, 3)
   })
 
-  it('sets the sharding level to zero', async () => {
-    await Config.create(adapter, { key: createKey, sharding: { level: 0 } })
+  it('sets the number of shards to zero', async () => {
+    let params = { key: createKey, shards: { n: 0 } }
+    let error = await Config.create(adapter, params).catch(e => e)
 
-    let { value } = await adapter.read('config')
-    let config = JSON.parse(value)
-
-    assert.equal(config.sharding.level, 0)
+    assert.equal(error.code, 'ERR_CONFIG')
   })
 
   async function open (...args) {
