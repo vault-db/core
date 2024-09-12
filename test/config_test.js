@@ -67,7 +67,7 @@ testWithAdapters('Config', (impl) => {
       try {
         return await Config.create(...args)
       } catch (error) {
-        if (error.code === 'ERR_EXIST') {
+        if (error.code === 'ERR_EXISTS') {
           return open(...args)
         } else {
           throw error

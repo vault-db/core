@@ -48,7 +48,7 @@ testWithAdapters('Store', (impl) => {
 
     it('does not allow the store to be re-created', async () => {
       let error = await Store.create(adapter, { key: createKey }).catch(e => e)
-      assert.equal(error.code, 'ERR_EXIST')
+      assert.equal(error.code, 'ERR_EXISTS')
     })
 
     it('updates several items', async () => {
