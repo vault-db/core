@@ -1,6 +1,6 @@
 'use strict'
 
-const Config = require('../lib/config')
+const { Config } = require('../lib/config')
 
 const { assert } = require('chai')
 const { testWithAdapters } = require('./adapters/utils')
@@ -58,17 +58,18 @@ testWithAdapters('Config', (impl) => {
     assert.equal(error.code, 'ERR_CONFIG')
   })
 
-  async function open (...args) {
+  async function open (adapter, options) {
     try {
-      return await Config.open(...args)
+      let openOpts = { key: { password: options.key.password } }
+      return await Config.open(adapter, openOpts)
     } catch (error) {
       if (error.code !== 'ERR_MISSING') throw error
 
       try {
-        return await Config.create(...args)
+        return await Config.create(adapter, options)
       } catch (error) {
         if (error.code === 'ERR_EXISTS') {
-          return open(...args)
+          return open(adapter, options)
         } else {
           throw error
         }

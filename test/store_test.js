@@ -18,7 +18,7 @@ testWithAdapters('Store', (impl) => {
 
   describe('with no existing data store', () => {
     it('fails to open the store', async () => {
-      let error = await Store.open(adapter).catch(e => e)
+      let error = await Store.open(adapter, { key: { password } }).catch(e => e)
       assert.equal(error.code, 'ERR_MISSING')
     })
 
@@ -84,7 +84,7 @@ testWithAdapters('Store', (impl) => {
 
     it('fails to open with no password', async () => {
       let error = await Store.open(adapter).catch(e => e)
-      assert.equal(error.code, 'ERR_ACCESS')
+      assert.equal(error.code, 'ERR_CONFIG')
     })
   })
 })
