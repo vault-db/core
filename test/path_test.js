@@ -91,6 +91,13 @@ describe('Path', () => {
       assert.deepEqual(joined.links(), [['/', 'path/'], ['/path/', 'to/'], ['/path/to/', 'x/']])
     })
 
+    it('joins a nested document name', () => {
+      let path = Path.parse('/path/to/')
+      let joined = path.join('nested/x')
+      assert.equal(joined.full(), '/path/to/nested/x')
+      assert.deepEqual(joined.links(), [['/', 'path/'], ['/path/', 'to/'], ['/path/to/', 'nested/'], ['/path/to/nested/', 'x']])
+    })
+
     it('does not affect the original path', () => {
       let path = Path.parse('/path/to/')
       let joined = path.join('x')
@@ -101,6 +108,52 @@ describe('Path', () => {
     it('throws an error trying to join a document path', () => {
       let path = Path.parse('/path/to')
       assert.throws(() => path.join('x'))
+    })
+  })
+
+  describe('relative()', () => {
+    it('returns the relative path of a child document', () => {
+      let dir = new Path('/path/to/')
+      let doc = new Path('/path/to/x.json')
+      assert.equal(doc.relative(dir), 'x.json')
+    })
+
+    it('returns the relative path of a sibling document', () => {
+      let x = new Path('/path/to/x.json')
+      let y = new Path('/path/to/y.json')
+      assert.equal(y.relative(x), 'y.json')
+    })
+
+    it('returns the relative path of a grandchild document', () => {
+      let dir = new Path('/path/to/')
+      let doc = new Path('/path/to/nested/x.json')
+      assert.equal(doc.relative(dir), 'nested/x.json')
+    })
+
+    it('returns the relative path of a child directory', () => {
+      let a = new Path('/path/to/')
+      let b = new Path('/path/to/x/')
+      assert.equal(b.relative(a), 'x/')
+    })
+
+    it('returns the relative path of a parent directory', () => {
+      let dir = new Path('/path/to/')
+      let doc = new Path('/path/to/x.json')
+      assert.equal(dir.relative(doc), './')
+    })
+
+    it('returns the relative path of a grandparent directory', () => {
+      let dir = new Path('/path/')
+      let doc = new Path('/path/to/x.json')
+      assert.equal(dir.relative(doc), '../')
+    })
+
+    it('returns the relative path of a cousin document', () => {
+      let a = new Path('/path/a/1.json')
+      let b = new Path('/path/to/b/2.json')
+
+      assert.equal(a.relative(b), '../../a/1.json')
+      assert.equal(b.relative(a), '../to/b/2.json')
     })
   })
 })
