@@ -117,10 +117,20 @@ testWithAdapters('Task', (impl) => {
       assert.deepEqual(doc, { a: 1, b: 2 })
     })
 
-    it('applies concurrent updates from different tasks', async () => {
-      await task.update('/doc', () => ({ a: 1 }))
-
+    it('applies concurrent updates from the same task', async () => {
       await Promise.all([
+        task.update('/doc', (doc) => ({ ...doc, a: 1 })),
+        task.update('/doc', (doc) => ({ ...doc, b: 2 })),
+        task.update('/doc', (doc) => ({ ...doc, c: 3 }))
+      ])
+
+      let doc = await checker.get('/doc')
+      assert.deepEqual(doc, { a: 1, b: 2, c: 3 })
+    })
+
+    it('applies concurrent updates from different tasks', async () => {
+      await Promise.all([
+        newTask().update('/doc', (doc) => ({ ...doc, a: 1 })),
         newTask().update('/doc', (doc) => ({ ...doc, b: 2 })),
         newTask().update('/doc', (doc) => ({ ...doc, c: 3 }))
       ])
