@@ -142,22 +142,22 @@ testWithAdapters('Task', (impl) => {
 
     it('returns the paths of all the docs', async () => {
       assert.deepEqual(await find('/'), [
-        '/a',
-        '/path/b',
-        '/path/c',
-        '/path/to/nested/d'
+        'a',
+        'path/b',
+        'path/c',
+        'path/to/nested/d'
       ])
     })
 
     it('returns the docs inside a specific directory', async () => {
       assert.deepEqual(await find('/path/'), [
-        '/path/b',
-        '/path/c',
-        '/path/to/nested/d'
+        'b',
+        'c',
+        'to/nested/d'
       ])
 
       assert.deepEqual(await find('/path/to/'), [
-        '/path/to/nested/d'
+        'nested/d'
       ])
     })
 
@@ -342,12 +342,12 @@ testWithAdapters('Task', (impl) => {
 
     it('removes the docs from a directory', async () => {
       await task.prune('/path/')
-      assert.deepEqual(await find('/'), ['/a'])
+      assert.deepEqual(await find('/'), ['a'])
     })
 
     it('removes the docs from a nested directory', async () => {
       await task.prune('/path/to/')
-      assert.deepEqual(await find('/'), ['/a', '/path/b', '/path/c'])
+      assert.deepEqual(await find('/'), ['a', 'path/b', 'path/c'])
     })
 
     it('throws an error for a non-dir path', async () => {

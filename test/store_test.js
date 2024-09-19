@@ -63,7 +63,7 @@ testWithAdapters('Store', (impl) => {
       for await (let doc of checker.find('/')) {
         docs.push(doc)
       }
-      assert.deepEqual(docs, ['/a', '/path/b', '/path/to/c'])
+      assert.deepEqual(docs, ['a', 'path/b', 'path/to/c'])
     })
 
     it('updates the same doc multiple times', async () => {
