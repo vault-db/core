@@ -52,6 +52,50 @@ describe('Path', () => {
     })
   })
 
+  describe('dirname()', () => {
+    it('returns the parent directory for a document', () => {
+      let path = Path.parse('/path/to/x.json')
+      assert.equal(path.dirname(), '/path/to/')
+    })
+
+    it('returns the parent directory for a top-level document', () => {
+      let path = Path.parse('/x.json')
+      assert.equal(path.dirname(), '/')
+    })
+
+    it('returns the parent directory of a directory', () => {
+      let path = Path.parse('/path/to/')
+      assert.equal(path.dirname(), '/path/')
+    })
+
+    it('returns the parent directory of the root directory', () => {
+      let path = Path.parse('/')
+      assert.isNull(path.dirname())
+    })
+  })
+
+  describe('basename()', () => {
+    it('returns the base name for a document', () => {
+      let path = Path.parse('/path/to/x.json')
+      assert.equal(path.basename(), 'x.json')
+    })
+
+    it('returns the base name for a top-level document', () => {
+      let path = Path.parse('/x.json')
+      assert.equal(path.basename(), 'x.json')
+    })
+
+    it('returns the base name of a directory', () => {
+      let path = Path.parse('/path/to/')
+      assert.equal(path.basename(), 'to/')
+    })
+
+    it('returns the base name of the root directory', () => {
+      let path = Path.parse('/')
+      assert.isNull(path.basename())
+    })
+  })
+
   describe('dirs()', () => {
     it('returns the parent directories for a document', () => {
       let path = Path.parse('/path/to/x.json')
