@@ -304,6 +304,49 @@ testWithAdapters('Task', (impl) => {
       assert.deepEqual(await checker.list('/'), ['new/', 'path/'])
       assert.deepEqual(await checker.list('/new/'), ['b'])
     })
+
+    describe('concurrent with update()', () => {
+      it('serializes concurrent remove() and update() requests', async () => {
+        await newTask().update('/path/nested/to/z', () => ({ ok: true }))
+
+        await Promise.all([
+          newTask().update('/path/nested/to/z', (doc) => ({ ...doc, z: 0 })),
+          newTask().remove('/path/nested/to/z')
+        ])
+
+        let checker = newTask()
+        let doc = await checker.get('/path/nested/to/z')
+
+        if (doc) {
+          assert.deepEqual(doc, { z: 0 })
+          assert.deepEqual(await checker.list('/path/nested/to/'), ['z'])
+          assert.deepEqual(await checker.list('/path/nested/'), ['to/'])
+          assert.deepEqual(await checker.list('/path/'), ['nested/', 'to/'])
+        } else {
+          assert.isNull(await checker.list('/path/nested/to/'))
+          assert.isNull(await checker.list('/path/nested/'))
+          assert.deepEqual(await checker.list('/path/'), ['to/'])
+        }
+      })
+
+      it('allows a new document being created in the same directory', async () => {
+        await newTask().prune('/path/nested/')
+        await newTask().update('/path/nested/to/z', () => ({ z: 0 }))
+
+        await Promise.all([
+          newTask().remove('/path/nested/to/z'),
+          newTask().update('/path/nested/to/y', () => ({ y: 0 }))
+        ])
+
+        let checker = newTask()
+        let doc = await checker.get('/path/nested/to/y')
+
+        assert.deepEqual(doc, { y: 0 })
+        assert.deepEqual(await checker.list('/path/nested/to/'), ['y'])
+        assert.deepEqual(await checker.list('/path/nested/'), ['to/'])
+        assert.deepEqual(await checker.list('/path/'), ['nested/', 'to/'])
+      })
+    })
   })
 
   describe('remove() after partial failure', () => {
