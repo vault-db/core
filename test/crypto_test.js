@@ -1,7 +1,5 @@
 'use strict'
 
-const NodeCrypto = require('../lib/crypto/node_crypto')
-const WebCrypto = require('../lib/crypto/web_crypto')
 
 const { assert } = require('chai')
 
@@ -151,10 +149,12 @@ function testCrypto (impl) {
   })
 }
 
-describe('crypto (node)', () => {
-  testCrypto(NodeCrypto)
-})
+const NodeCrypto = require('../lib/crypto/node_crypto')
+describe('crypto (node)', () => testCrypto(NodeCrypto))
 
-describe('crypto (web)', () => {
-  testCrypto(WebCrypto)
-})
+const version = process.version.match(/\d+/g).map((n) => parseInt(n, 10))
+
+if (version[0] >= 16) {
+  const WebCrypto = require('../lib/crypto/web_crypto')
+  describe('crypto (web)', () => testCrypto(WebCrypto))
+}
