@@ -1352,11 +1352,11 @@ describe('Schedule', () => {
 
     //      |   +----+
     //    A |   | w5 |
-    //      |   +---\+
-    //      |        \
-    //      |        +\---+
-    //    B |        | w6 |
-    //      |        +----+
+    //      |   +----+
+    //      |
+    //      |
+    //    B |
+    //      |
     //      |
     //      |
     //    C |
@@ -1368,8 +1368,7 @@ describe('Schedule', () => {
       group.failed()
 
       assertGraph(schedule, {
-        g1: ['A', [w5]],
-        g2: ['B', [w6], ['g1']]
+        g1: ['A', [w5]]
       })
     })
 
@@ -1400,8 +1399,54 @@ describe('Schedule', () => {
       group.failed()
 
       assertGraph(schedule, {
-        g1: ['A', [w5]],
-        g2: ['B', [w6], ['g1']]
+        g1: ['A', [w5]]
+      })
+    })
+
+    describe('when a shard has groups scheduled after a started group', () => {
+      let schedule, group
+
+      //      |          +----+    +----+
+      //    A |          | w2 |    | w4 |
+      //      |          +---\+    +/---+
+      //      |               \    /
+      //      |   +    +      +\--/+
+      //    B |     w1        | w3 |
+      //      |   +    +      +----+
+      //
+      beforeEach(() => {
+        schedule = new Schedule()
+
+        let w1 = schedule.add('B', [], 'val 1')
+
+        group = schedule.nextGroup().started()
+
+        let w2 = schedule.add('A', [], 'val 2')
+        let w3 = schedule.add('B', [w2], 'val 3')
+        let w4 = schedule.add('A', [w3], 'val 4')
+      })
+
+      it('removes all groups from a shard where a group fails', () => {
+        assertGraph(schedule, {
+          g1: ['B', [w1]],
+          g2: ['A', [w2]],
+          g3: ['B', [w3], ['g2']],
+          g4: ['A', [w4], ['g3']]
+        })
+
+        assertShardList(schedule, 'A', [w2], [w4])
+        assertShardList(schedule, 'B', [w1], [w3])
+
+        group.failed()
+
+        assertGraph(schedule, {
+          g1: ['A', [w2]]
+        })
+      })
+
+      it('returns a list of all the cancelled operations', () => {
+        let ops = group.failed()
+        assert.deepEqual(ops, ['val 1', 'val 3', 'val 4'])
       })
     })
 
@@ -1477,17 +1522,17 @@ describe('Schedule', () => {
       })
     })
 
-    //      |        +------------+                 +----+
-    //    A |        | w2      w6 |                 | w6 |
-    //      |        +/--\--------+                 +----+
-    //      |        /    \
-    //      |   +---/+    +\-----------+                 +----+
-    //    B |   | w1 |    | w3      w5 |      =>         | w5 |
-    //      |   +----+    +--------/---+                 +/---+
-    //      |                     /                      /
-    //      |                +---/+                 +---/+
-    //    C |                | w4 |                 | w4 |
-    //      |                +----+                 +----+
+    //      |        +------------+
+    //    A |        | w2      w6 -------.
+    //      |        +/--\--------+       \
+    //      |        /    \                \
+    //      |   +---/+    +\-----------+    \
+    //    B |   | w1 |    | w3      w5 |     \
+    //      |   +----+    +--------/---+      \
+    //      |                     /            \
+    //      |                +---/--------------\---+
+    //    C |                | w4                w7 |
+    //      |                +----------------------+
     //
     it('removes group dependencies that result from removed operation dependencies', () => {
       let schedule = new Schedule()
@@ -1498,11 +1543,12 @@ describe('Schedule', () => {
       let w4 = schedule.add('C', [])
       let w5 = schedule.add('B', [w4])
       let w6 = schedule.add('A', [])
+      let w7 = schedule.add('C', [w6])
 
       assertGraph(schedule, {
         g1: ['B', [w1]],
         g2: ['A', [w2, w6], ['g1']],
-        g3: ['C', [w4]],
+        g3: ['C', [w4, w7], ['g2']],
         g4: ['B', [w3, w5], ['g2', 'g3']]
       })
 
@@ -1511,9 +1557,8 @@ describe('Schedule', () => {
       group.failed()
 
       assertGraph(schedule, {
-        g1: ['C', [w4]],
-        g2: ['B', [w5], ['g1']],
-        g3: ['A', [w6]]
+        g1: ['A', [w6]],
+        g2: ['C', [w4, w7], ['g1']]
       })
     })
 
@@ -1541,7 +1586,7 @@ describe('Schedule', () => {
       let schedule = new Schedule()
 
       let w1 = schedule.add('C', [], 'val 1')
-      let w2 = schedule.add('B', [w1])
+      let w2 = schedule.add('B', [w1], 'val 2')
       let w3 = schedule.add('A', [w2])
       let w4 = schedule.add('B', [w3])
       let w5 = schedule.add('C', [w4])
@@ -1571,8 +1616,12 @@ describe('Schedule', () => {
       let group2 = schedule.nextGroup().started()
       assert.deepEqual([...group2.values()], ['val 6'])
 
+      group1.completed()
+      let group3 = schedule.nextGroup().started()
+      assert.deepEqual([...group3.values()], ['val 2'])
+
       let w11 = schedule.add('E', [])
-      group1.failed()
+      group3.failed()
 
       assertGraph(schedule, {
         g1: ['E', [w6]],
