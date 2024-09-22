@@ -4,6 +4,14 @@
 const { assert } = require('chai')
 
 function testCrypto (impl) {
+  describe('randomBytes()', () => {
+    it('generates random buffers', async () => {
+      let key = await impl.randomBytes(16)
+      assert.instanceOf(key, Buffer)
+      assert.equal(key.length, 16)
+    })
+  })
+
   describe('SHA-256', () => {
     it('computes digests', async () => {
       let data = Buffer.from('some data', 'utf8')
