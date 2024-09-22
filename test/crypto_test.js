@@ -51,56 +51,55 @@ function testCrypto (impl) {
     it('generates an IV', async () => {
       let iv = await impl.aes256gcm.generateIv()
       assert.instanceOf(iv, Buffer)
-      assert.equal(iv.length, 16)
+      assert.equal(iv.length, 12)
     })
 
     it('encrypts a message', async () => {
       let key = Buffer.from('jam1+7s+qyvQfaBZtIfS35/KSlt3QWlyr7OjsT6rp8E=', 'base64')
-      let iv = Buffer.from('vzI0dsZR/rdkmYflzpOJwA==', 'base64')
+      let iv = Buffer.from('SYY1si0hQeE1bYxf', 'base64')
       let msg = Buffer.from('the quick brown fox jumps over the lazy dog', 'utf8')
 
       let data = await impl.aes256gcm.encrypt(key, iv, msg)
 
       assert.equal(
         data.toString('base64'),
-        'YJG5PBzwVW57j/w1N7lIDAN+w7TgsY5+GOzYuso6+Q0ptS8pwleLNDigJ4OEZ6A5tuseLNjX7FURi74=')
+        'm3YH1wwyxhqJpslNHenpylaa4lxDPcJhvqRWjVB4EZGPtUgYJCES5ASaXki+06gXyZ5FCKieWLnP/lg=')
     })
 
     describe('decrypt()', () => {
       let key = Buffer.from('hSZO6x/ffuPhW1aNmeSUB5vBV/ocTDtlbGeODN26Ovw=', 'base64')
-      let iv = Buffer.from('uvN7ZnNI6Ob3c/Of10K5tw==', 'base64')
+      let iv = Buffer.from('H+5XRhyLPi/+j+8M', 'base64')
+
+      async function assertRejects (fn) {
+        let error
+        try {
+          await fn()
+        } catch (e) {
+          error = e
+        }
+        assert(error)
+      }
 
       it('decrypts a message', async () => {
-        let msg = Buffer.from('jqicVSHoa+ggSTOIv7KlCDVrsykiMX0+krljMx72HVAq11zh3RNG', 'base64')
+        let msg = Buffer.from('1lkc6Nq7DdZ3FC0B2McL33rjkjl868X1oxPforQphnInQKL9irlz', 'base64')
 
         let data = await impl.aes256gcm.decrypt(key, iv, msg)
         assert.equal(data.toString('utf8'), 'very secret information')
       })
 
+      it('fails to decrypt a modified IV', async () => {
+        let msg = Buffer.from('Xlkc6Nq7DdZ3FC0B2McL33rjkjl868X1oxPforQphnInQKL9irlz', 'base64')
+        await assertRejects(() => impl.aes256gcm.decrypt(key, iv, msg))
+      })
+
       it('fails to decrypt a modified ciphertext', async () => {
-        let msg = Buffer.from('kqicVSHoa+ggSTOIv7KlCDVrsykiMX0+krljMx72HVAq11zh3RNG', 'base64')
-        let error
-
-        try {
-          await impl.aes256gcm.decrypt(key, iv, msg)
-        } catch (e) {
-          error = e
-        }
-
-        assert(error)
+        let msg = Buffer.from('1lkc6Nq7DdZ3FC0B2McLX3rjkjl868X1oxPforQphnInQKL9irlz', 'base64')
+        await assertRejects(() => impl.aes256gcm.decrypt(key, iv, msg))
       })
 
       it('fails to decrypt a modified auth tag', async () => {
-        let msg = Buffer.from('jqicVSHoa+ggSTOIv7KlCDVrsykiMX0+krljMx72HVAq11zh3RNX', 'base64')
-        let error
-
-        try {
-          await impl.aes256gcm.decrypt(key, iv, msg)
-        } catch (e) {
-          error = e
-        }
-
-        assert(error)
+        let msg = Buffer.from('1lkc6Nq7DdZ3FC0B2McL33rjkjl868X1oxPforQphnInQKL9irlX', 'base64')
+        await assertRejects(() => impl.aes256gcm.decrypt(key, iv, msg))
       })
     })
   })
