@@ -18,7 +18,8 @@ function testCipherBehaviour (impl) {
     assert.instanceOf(enc, Buffer)
 
     // 12-byte IV, 48-byte ciphertext, 16-byte auth tag
-    assert.equal(enc.length, 76)
+    // possible extra 4-byte header for key ID
+    assert(enc.length === 76 || enc.length === 80)
   })
 
   it('returns a different ciphertext each time', async () => {
