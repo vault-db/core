@@ -1,7 +1,7 @@
 'use strict'
 
+const AesGcmSingleKeyCipher = require('../lib/ciphers/aes_gcm_single_key')
 const Cache = require('../lib/cache')
-const Cipher = require('../lib/cipher')
 const Executor = require('../lib/executor')
 const Shard = require('../lib/shard')
 
@@ -13,7 +13,7 @@ testWithAdapters('Executor', (impl) => {
 
   beforeEach(async () => {
     store = impl.createAdapter()
-    cipher = new Cipher({ key: await Cipher.generateKey() })
+    cipher = await AesGcmSingleKeyCipher.generate()
     executor = new Executor(new Cache(store, cipher))
     cache = new Cache(store, cipher)
   })

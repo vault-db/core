@@ -1,6 +1,6 @@
 'use strict'
 
-const Cipher = require('../lib/cipher')
+const AesGcmSingleKeyCipher = require('../lib/ciphers/aes_gcm_single_key')
 const Shard = require('../lib/shard')
 const { assert } = require('chai')
 
@@ -8,7 +8,7 @@ describe('Shard', () => {
   let cipher, shard
 
   beforeEach(async () => {
-    cipher = new Cipher({ key: await Cipher.generateKey() })
+    cipher = await AesGcmSingleKeyCipher.generate()
     shard = Shard.parse(null, cipher)
   })
 
