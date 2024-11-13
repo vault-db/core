@@ -1,6 +1,5 @@
 'use strict'
 
-
 const { assert } = require('chai')
 
 function testCrypto (impl) {
