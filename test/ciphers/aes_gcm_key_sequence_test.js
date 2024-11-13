@@ -1,5 +1,6 @@
 'use strict'
 
+const AesGcmSingleKeyCipher = require('../../lib/ciphers/aes_gcm_single_key')
 const AesGcmKeySequenceCipher = require('../../lib/ciphers/aes_gcm_key_sequence')
 const crypto = require('../../lib/crypto')
 
@@ -10,16 +11,18 @@ const LIMIT = 10
 
 describe('AesGcmKeySequenceCipher', () => {
   testCipherBehaviour({
-    createCipher () {
-      return new AesGcmKeySequenceCipher()
+    async createCipher () {
+      let root = await AesGcmSingleKeyCipher.generate()
+      return new AesGcmKeySequenceCipher(root)
     }
   })
 
   describe('key rotation', () => {
-    let cipher
+    let root, cipher
 
-    beforeEach(() => {
-      cipher = new AesGcmKeySequenceCipher({ limit: LIMIT })
+    beforeEach(async () => {
+      root = await AesGcmSingleKeyCipher.generate()
+      cipher = new AesGcmKeySequenceCipher(root, { limit: LIMIT })
     })
 
     it('encrypts up to the limit with a single key', async () => {
@@ -88,8 +91,8 @@ describe('AesGcmKeySequenceCipher', () => {
       }
       assert.equal(cipher.size(), n)
 
-      let state = cipher.serialize()
-      let copy = AesGcmKeySequenceCipher.parse(state, { limit: LIMIT })
+      let state = await cipher.serialize()
+      let copy = AesGcmKeySequenceCipher.parse(state, root, { limit: LIMIT })
 
       for (let i = a; i < b; i++) {
         encs.push(await copy.encrypt(message))
