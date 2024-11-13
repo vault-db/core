@@ -29,13 +29,6 @@ describe('AesGcmKeySequenceCipher', () => {
       assert.equal(cipher.size(), 1)
     })
 
-    it('rejects ciphertexts with bad sequence numbers', async () => {
-      let enc = await cipher.encrypt(Buffer.from('hi', 'utf8'))
-      enc.writeUInt32BE(42)
-      let error = await cipher.decrypt(enc).catch(e => e)
-      assert.equal(error.code, 'ERR_MISSING_KEY')
-    })
-
     it('creates a new key each time the limit is reached', async () => {
       let message = Buffer.from('a message', 'utf8')
 
@@ -72,6 +65,45 @@ describe('AesGcmKeySequenceCipher', () => {
 
       for (let i = 0; i < messages.length; i++) {
         assert.equal(messages[i].toString('base64'), decs[i].toString('base64'))
+      }
+    })
+
+    it('rejects ciphertexts with bad sequence numbers', async () => {
+      let enc = await cipher.encrypt(Buffer.from('hi', 'utf8'))
+      enc.writeUInt32BE(42)
+      let error = await cipher.decrypt(enc).catch(e => e)
+      assert.equal(error.code, 'ERR_MISSING_KEY')
+    })
+
+    it('can serialize and restore the key sequence state', async () => {
+      let message = Buffer.from('the message', 'utf8')
+      let encs = []
+
+      let n = 3
+      let a = n * LIMIT - 3
+      let b = n * LIMIT
+
+      for (let i = 0; i < a; i++) {
+        encs.push(await cipher.encrypt(message))
+      }
+      assert.equal(cipher.size(), n)
+
+      let state = cipher.serialize()
+      let copy = AesGcmKeySequenceCipher.parse(state, { limit: LIMIT })
+
+      for (let i = a; i < b; i++) {
+        encs.push(await copy.encrypt(message))
+      }
+      assert.equal(copy.size(), n)
+
+      encs.push(await copy.encrypt(message))
+      assert.equal(copy.size(), n + 1)
+
+      for (let [i, enc] of encs.entries()) {
+        if (i < b) {
+          assert.equal(await cipher.decrypt(enc), 'the message')
+        }
+        assert.equal(await copy.decrypt(enc), 'the message')
       }
     })
   })
