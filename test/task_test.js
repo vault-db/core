@@ -4,15 +4,16 @@ const AesGcmSingleKeyCipher = require('../lib/ciphers/aes_gcm_single_key')
 const Cache = require('../lib/cache')
 const Router = require('../lib/router')
 const Task = require('../lib/task')
+const Verifier = require('../lib/verifier')
 
 const { assert } = require('chai')
 const { testWithAdapters } = require('./adapters/utils')
 
 testWithAdapters('Task', (impl) => {
-  let router, cipher, adapter, task, checker
+  let router, cipher, verifier, adapter, task, checker
 
   function newTask () {
-    return new Task(adapter, router, cipher)
+    return new Task(adapter, router, cipher, verifier)
   }
 
   async function find (path) {
@@ -26,6 +27,7 @@ testWithAdapters('Task', (impl) => {
   beforeEach(async () => {
     router = new Router({ n: 2, key: await Router.generateKey() })
     cipher = await AesGcmSingleKeyCipher.generate()
+    verifier = new Verifier({ key: await Verifier.generateKey() })
     adapter = impl.createAdapter()
     task = newTask()
     checker = newTask()
@@ -351,7 +353,7 @@ testWithAdapters('Task', (impl) => {
 
   describe('remove() after partial failure', () => {
     beforeEach(async () => {
-      let cache = new Cache(adapter, cipher)
+      let cache = new Cache(adapter, cipher, verifier)
 
       let id = await router.getShardId('/')
       let shard = await cache.read(id)

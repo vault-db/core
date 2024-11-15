@@ -2,14 +2,17 @@
 
 const AesGcmSingleKeyCipher = require('../lib/ciphers/aes_gcm_single_key')
 const Shard = require('../lib/shard')
+const Verifier = require('../lib/verifier')
+
 const { assert } = require('chai')
 
 describe('Shard', () => {
-  let cipher, shard
+  let cipher, verifier, shard
 
   beforeEach(async () => {
     cipher = await AesGcmSingleKeyCipher.generate()
-    shard = Shard.parse(null, cipher)
+    verifier = new Verifier({ key: await Verifier.generateKey() })
+    shard = await Shard.parse(null, cipher, verifier)
   })
 
   it('returns null for a non-existent directory', async () => {
@@ -116,7 +119,7 @@ describe('Shard', () => {
     await shard.link('/', 'doc.txt')
     await shard.put('/doc.txt', () => ({ a: 1 }))
 
-    let copy = Shard.parse(await shard.serialize(), cipher)
+    let copy = await Shard.parse(await shard.serialize(), cipher, verifier)
 
     assert.deepEqual(await copy.list('/'), ['doc.txt'])
     assert.deepEqual(await copy.get('/doc.txt'), { a: 1 })
