@@ -3,6 +3,7 @@
 const AesGcmSingleKeyCipher = require('../../lib/ciphers/aes_gcm_single_key')
 const AesGcmKeySequenceCipher = require('../../lib/ciphers/aes_gcm_key_sequence')
 const crypto = require('../../lib/crypto')
+const Verifier = require('../../lib/verifier')
 
 const testCipherBehaviour = require('./behaviour')
 const { assert } = require('chai')
@@ -13,16 +14,18 @@ describe('AesGcmKeySequenceCipher', () => {
   testCipherBehaviour({
     async createCipher () {
       let root = await AesGcmSingleKeyCipher.generate()
-      return new AesGcmKeySequenceCipher(root)
+      let verifier = new Verifier({ key: await Verifier.generateKey() })
+      return new AesGcmKeySequenceCipher(root, verifier)
     }
   })
 
   describe('key rotation', () => {
-    let root, cipher
+    let root, verifier, cipher
 
     beforeEach(async () => {
       root = await AesGcmSingleKeyCipher.generate()
-      cipher = new AesGcmKeySequenceCipher(root, { limit: LIMIT })
+      verifier = new Verifier({ key: await Verifier.generateKey() })
+      cipher = new AesGcmKeySequenceCipher(root, verifier, { limit: LIMIT })
     })
 
     it('encrypts up to the limit with a single key', async () => {
@@ -92,7 +95,7 @@ describe('AesGcmKeySequenceCipher', () => {
       assert.equal(cipher.size(), n)
 
       let state = await cipher.serialize()
-      let copy = AesGcmKeySequenceCipher.parse(state, root, { limit: LIMIT })
+      let copy = await AesGcmKeySequenceCipher.parse(state, root, verifier, { limit: LIMIT })
 
       for (let i = a; i < b; i++) {
         encs.push(await copy.encrypt(message))
