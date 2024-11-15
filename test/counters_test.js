@@ -60,5 +60,50 @@ describe('Counters', () => {
       assert.equal(copy.get('y'), 5)
       assert.equal(copy.get('x'), 3)
     })
+
+    describe('with two copies of the same starting state', () => {
+      let alice, bob
+
+      beforeEach(async () => {
+        let state = await counters.serialize()
+        let ids = ['x', 'y']
+
+        alice = await Counters.parse(state, ids, verifier)
+        bob = await Counters.parse(state, ids, verifier)
+      })
+
+      it('can merge uncommitted updates', () => {
+        for (let i = 0; i < 7; i++) alice.incr('x')
+        for (let i = 0; i < 11; i++) bob.incr('y')
+
+        assert.equal(alice.get('y'), 5)
+        alice.merge(bob)
+        assert.equal(alice.get('x'), 10)
+        assert.equal(alice.get('y'), 16)
+      })
+
+      it('does not merge diffs that are already committed', () => {
+        for (let i = 0; i < 11; i++) bob.incr('y')
+        bob.commit()
+
+        assert.equal(alice.get('y'), 5)
+        alice.merge(bob)
+        assert.equal(alice.get('y'), 5)
+      })
+
+      it('does not merge counts for newly initialised IDs', () => {
+        alice.init('z', 0)
+        for (let i = 0; i < 2; i++) alice.incr('z')
+
+        bob.init('z', 0)
+        for (let i = 0; i < 3; i++) bob.incr('z')
+
+        alice.merge(bob)
+        assert.equal(alice.get('z'), 2)
+
+        bob.merge(alice)
+        assert.equal(bob.get('z'), 3)
+      })
+    })
   })
 })
