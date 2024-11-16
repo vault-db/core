@@ -166,6 +166,46 @@ testWithAdapters('Cache', (impl) => {
         let shard = await cache.read('x')
         assert.deepEqual(await shard.get('/path/doc.txt'), { p: 1 })
       })
+
+      it('merges the shard key counter state on reload', async () => {
+        let shard = await cache.read('x')
+        let counters = shard.getCounters()
+
+        assert.equal(counters.get(1), 4)
+
+        await shard.link('/', 'path/')
+        await shard.link('/path/', 'doc.txt')
+        await shard.put('/path/doc.txt', (doc) => ({ ...doc, r: 3 }))
+
+        await cache.write('x').catch(e => e)
+
+        assert.equal(counters.get(1), 7)
+
+        shard = await cache.read('x')
+        counters = shard.getCounters()
+
+        assert.equal(counters.get(1), 8)
+      })
+
+      it('does not double-count encryptions already committed', async () => {
+        let copy = await other.read('x')
+        let counters = copy.getCounters()
+
+        assert.equal(counters.get(1), 5)
+
+        cache = new Cache(adapter, cipher, verifier)
+        let shard = await cache.read('x')
+        await shard.put('/path/doc.txt', (doc) => ({ ...doc, r: 3 }))
+        await cache.write('x')
+
+        await copy.put('/path/doc.txt', (doc) => ({ ...doc, s: 4 }))
+        await other.write('x').catch(e => e)
+
+        copy = await other.read('x')
+        counters = copy.getCounters()
+
+        assert.equal(counters.get(1), 7)
+      })
     })
   })
 })
