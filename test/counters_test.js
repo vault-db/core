@@ -15,7 +15,7 @@ describe('Counters', () => {
 
   it('returns zero for an unknown ID', () => {
     let ctr = counters.get('x')
-    assert.equal(ctr, 0)
+    assert.equal(ctr, 0n)
   })
 
   it('refuses to increment an unknown ID', () => {
@@ -25,7 +25,7 @@ describe('Counters', () => {
   it('increments an initialised ID', () => {
     counters.init('x')
     counters.incr('x')
-    assert.equal(counters.get('x'), 1)
+    assert.equal(counters.get('x'), 1n)
   })
 
   it('refuses to re-initialise an existing ID', () => {
@@ -36,7 +36,7 @@ describe('Counters', () => {
   it('allows an ID to be initialised with a non-zero number', () => {
     counters.init('x', 2)
     for (let i = 0; i < 3; i++) counters.incr('x')
-    assert.equal(counters.get('x'), 5)
+    assert.equal(counters.get('x'), 5n)
   })
 
   describe('with some non-zero counters stored', () => {
@@ -49,16 +49,16 @@ describe('Counters', () => {
     })
 
     it('stores the number of times incr() is called for each ID', () => {
-      assert.equal(counters.get('y'), 5)
-      assert.equal(counters.get('x'), 3)
+      assert.equal(counters.get('y'), 5n)
+      assert.equal(counters.get('x'), 3n)
     })
 
     it('can be de/serialised', async () => {
       let state = await counters.serialize()
       let copy = await Counters.parse(state, ['x', 'y'], verifier)
 
-      assert.equal(copy.get('y'), 5)
-      assert.equal(copy.get('x'), 3)
+      assert.equal(copy.get('y'), 5n)
+      assert.equal(copy.get('x'), 3n)
     })
 
     describe('with two copies of the same starting state', () => {
@@ -76,19 +76,19 @@ describe('Counters', () => {
         for (let i = 0; i < 7; i++) alice.incr('x')
         for (let i = 0; i < 11; i++) bob.incr('y')
 
-        assert.equal(alice.get('y'), 5)
+        assert.equal(alice.get('y'), 5n)
         alice.merge(bob)
-        assert.equal(alice.get('x'), 10)
-        assert.equal(alice.get('y'), 16)
+        assert.equal(alice.get('x'), 10n)
+        assert.equal(alice.get('y'), 16n)
       })
 
       it('does not merge diffs that are already committed', () => {
         for (let i = 0; i < 11; i++) bob.incr('y')
         bob.commit()
 
-        assert.equal(alice.get('y'), 5)
+        assert.equal(alice.get('y'), 5n)
         alice.merge(bob)
-        assert.equal(alice.get('y'), 5)
+        assert.equal(alice.get('y'), 5n)
       })
 
       it('does not merge counts for newly initialised IDs', () => {
@@ -99,10 +99,10 @@ describe('Counters', () => {
         for (let i = 0; i < 3; i++) bob.incr('z')
 
         alice.merge(bob)
-        assert.equal(alice.get('z'), 2)
+        assert.equal(alice.get('z'), 2n)
 
         bob.merge(alice)
-        assert.equal(bob.get('z'), 3)
+        assert.equal(bob.get('z'), 3n)
       })
     })
   })
