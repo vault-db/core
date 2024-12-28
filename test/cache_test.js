@@ -171,7 +171,7 @@ testWithAdapters('Cache', (impl) => {
         let shard = await cache.read('x')
         let counters = shard.getCounters()
 
-        assert.equal(counters.get(1), 4n)
+        assert.equal(counters.get('1.msg'), 4n)
 
         await shard.link('/', 'path/')
         await shard.link('/path/', 'doc.txt')
@@ -179,19 +179,19 @@ testWithAdapters('Cache', (impl) => {
 
         await cache.write('x').catch(e => e)
 
-        assert.equal(counters.get(1), 7n)
+        assert.equal(counters.get('1.msg'), 7n)
 
         shard = await cache.read('x')
         counters = shard.getCounters()
 
-        assert.equal(counters.get(1), 8n)
+        assert.equal(counters.get('1.msg'), 8n)
       })
 
       it('does not double-count encryptions already committed', async () => {
         let copy = await other.read('x')
         let counters = copy.getCounters()
 
-        assert.equal(counters.get(1), 5n)
+        assert.equal(counters.get('1.msg'), 5n)
 
         cache = new Cache(adapter, cipher, verifier)
         let shard = await cache.read('x')
@@ -204,7 +204,7 @@ testWithAdapters('Cache', (impl) => {
         copy = await other.read('x')
         counters = copy.getCounters()
 
-        assert.equal(counters.get(1), 7n)
+        assert.equal(counters.get('1.msg'), 7n)
       })
     })
   })
