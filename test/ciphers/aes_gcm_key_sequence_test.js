@@ -112,5 +112,47 @@ describe('AesGcmKeySequenceCipher', () => {
         assert.equal(await copy.decrypt(enc), 'the message')
       }
     })
+
+    describe('two clients hitting the limit on the same key', () => {
+      let message = Buffer.from('a message', 'utf8')
+      let alice, bob
+
+      async function clone (cipher) {
+        let state = await cipher.serialize()
+        return AesGcmKeySequenceCipher.parse(state, root, verifier, { limit: LIMIT })
+      }
+
+      beforeEach(async () => {
+        for (let i = 0; i < 3 * LIMIT - 2; i++) {
+          await cipher.encrypt(message)
+        }
+
+        alice = await clone(cipher)
+        bob = await clone(cipher)
+
+        for (let i = 0; i < LIMIT / 2; i++) {
+          await alice.encrypt(message)
+          await bob.encrypt(message)
+        }
+      })
+
+      it('merges the state of the last shared key', async () => {
+        let counters = alice.getCounters()
+
+        counters.commit()
+        counters.merge(bob.getCounters())
+
+        assert.equal(counters.get('3.msg'), LIMIT + 2)
+      })
+
+      it('does not merge the state of the newly added key', async () => {
+        let counters = alice.getCounters()
+
+        counters.commit()
+        counters.merge(bob.getCounters())
+
+        assert.equal(counters.get('4.msg'), LIMIT / 2 - 2)
+      })
+    })
   })
 })
