@@ -76,7 +76,7 @@ describe('AesGcmKeySequenceCipher', () => {
 
     it('rejects ciphertexts with bad sequence numbers', async () => {
       let enc = await cipher.encrypt(Buffer.from('hi', 'utf8'))
-      enc.writeUInt32BE(42)
+      enc.writeUInt32BE(42, 0)
       let error = await cipher.decrypt(enc).catch(e => e)
       assert.equal(error.code, 'ERR_MISSING_KEY')
     })
