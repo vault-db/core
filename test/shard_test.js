@@ -121,4 +121,69 @@ describe('Shard', () => {
     assert.deepEqual(await copy.list('/'), ['doc.txt'])
     assert.deepEqual(await copy.get('/doc.txt'), { a: 1 })
   })
+
+  describe('concurrent operations', () => {
+    async function delayed (n, fn) {
+      while (n--) await null
+      return fn()
+    }
+
+    for (let i = 1; i <= 5; i++) {
+      describe(`delay: ${i}`, () => {
+        it('lists a directory during an insert', async () => {
+          await shard.link('/', 'path/')
+          await shard.link('/path/', 'b')
+          await shard.put('/path/b', () => ({ b: 2 }))
+
+          let [_, list] = await Promise.all([
+            shard.put('/a', () => ({ a: 1 })),
+            delayed(i, () => shard.list('/path/'))
+          ])
+
+          assert.deepEqual(list, ['b'])
+        })
+
+        it('lists a directory during a removal', async () => {
+          await shard.link('/', 'path/')
+          await shard.put('/a', () => ({ a: 1 }))
+          await shard.link('/path/', 'b')
+          await shard.put('/path/b', () => ({ b: 2 }))
+
+          let [_, list] = await Promise.all([
+            shard.rm('/a'),
+            delayed(i, () => shard.list('/path/'))
+          ])
+
+          assert.deepEqual(list, ['b'])
+        })
+
+        it('lists a directory during a directory creation', async () => {
+          await shard.link('/', 'path/')
+          await shard.link('/path/', 'b')
+          await shard.put('/path/b', () => ({ b: 2 }))
+
+          let [_, list] = await Promise.all([
+            shard.link('/a/', 'x'),
+            delayed(i, () => shard.list('/path/'))
+          ])
+
+          assert.deepEqual(list, ['b'])
+        })
+
+        it('lists a directory during a directory removal', async () => {
+          await shard.link('/', 'path/')
+          await shard.link('/a/', 'x')
+          await shard.link('/path/', 'b')
+          await shard.put('/path/b', () => ({ b: 2 }))
+
+          let [_, list] = await Promise.all([
+            shard.unlink('/a/', 'x'),
+            delayed(i, () => shard.list('/path/'))
+          ])
+
+          assert.deepEqual(list, ['b'])
+        })
+      })
+    }
+  })
 })
