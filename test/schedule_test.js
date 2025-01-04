@@ -99,6 +99,19 @@ describe('Schedule', () => {
       })
     })
 
+    it('throws an error if an unknown dependency is given', () => {
+      let error
+
+      try {
+        let w1 = schedule.add('A', [])
+        let w2 = schedule.add('A', [w1 + 'nope'])
+      } catch (e) {
+        error = e
+      }
+
+      assert.equal(error.code, 'ERR_SCHEDULE')
+    })
+
     //      |   +----------------------------+
     //    A |   | w1 ---- w2 ---- w3 ---- w4 |
     //      |   +----------------------------+
